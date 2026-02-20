@@ -22,3 +22,20 @@ services:
       - "6379:6379"
 volumes:
   pgdata:
+
+app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=telkom_user
+      - DB_PASSWORD=telkom_password
+      - DB_NAME=telkom_tickets
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
