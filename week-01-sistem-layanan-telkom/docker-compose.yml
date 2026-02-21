@@ -11,6 +11,11 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telkom_user -d telkom_tickets"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   rabbitmq:
     image: rabbitmq:3-management-alpine
     ports:
@@ -20,10 +25,7 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-volumes:
-  pgdata:
-
-app:
+  app:
     build: .
     ports:
       - "3000:3000"
@@ -36,6 +38,11 @@ app:
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - REDIS_ADDR=redis:6379
     depends_on:
-      - postgres
-      - rabbitmq
-      - redis
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      redis:
+        condition: service_started
+volumes:
+  pgdata:

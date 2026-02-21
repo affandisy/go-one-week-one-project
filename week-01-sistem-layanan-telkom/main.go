@@ -47,7 +47,18 @@ func main() {
 		os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
 
 	var err error
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
+	// Retry Logic
+	for i := 1; i <= 5; i++ {
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			log.Println("Database connection successful!")
+			break
+		}
+		log.Printf("Gagal koneksi ke database (percobaan %d/5)", i)
+		time.Sleep(3 * time.Second)
+	}
+
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
@@ -77,10 +88,12 @@ func main() {
 		log.Fatal("Failed to declare queue: ", err)
 	}
 
+	go StartTicketConsumer()
+
 	app := fiber.New()
 
-	app.Post("/tickets", CreateTicket)
-	app.Get("/tickets", GetTicket)
+	app.Post("/tickets", CreateTicketProducer)
+	app.Get("/tickets", GetTicketsCached)
 	app.Put("/ticket/:id", UpdateTicketStatus)
 
 	log.Println("Server is running on port 3000")
