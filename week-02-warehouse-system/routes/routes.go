@@ -5,8 +5,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler) {
+func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler) {
 	api := app.Group("/api/v1")
+
+	auth := api.Group("/auth")
+	auth.Post("/register", userHandler.Register)
+	auth.Post("/login", userHandler.Login)
 
 	products := api.Group("/products")
 	products.Post("/", productHandler.CreateProduct)

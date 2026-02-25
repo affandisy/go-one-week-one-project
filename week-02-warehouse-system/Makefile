@@ -16,7 +16,7 @@ go get github.com/golang-jwt/jwt/v5
 docker-compose up -d
 
 
-# 5. Uji coba POST
+# 5. Uji coba POST Produk
 http://localhost:3000/api/v1/products
 
 {
@@ -28,4 +28,17 @@ http://localhost:3000/api/v1/products
     "price": 75000,
     "min_stock": 10,
     "max_stock": 100
+}
+
+# 6. Uji coba GET Produk
+http://localhost:3000/api/v1/products
+
+# 7. Uji coba POST User
+http://localhost:3000/api/v1/auth/register
+
+{
+    "name": "Budi Gudang",
+    "email": "budi@gudang.com",
+    "password": "rahasia_budi",
+    "role": "admin"
 }
