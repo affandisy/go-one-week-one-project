@@ -42,3 +42,24 @@ http://localhost:3000/api/v1/auth/register
     "password": "rahasia_budi",
     "role": "admin"
 }
+
+# 8. Uji coba POST Login
+http://localhost:3000/api/v1/auth/login
+
+{
+    "email": "budi@gudang.com",
+    "password": "rahasia_budi",
+}
+
+# 8. Uji coba POST Stock In
+http://localhost:3000/api/v1/transactions
+
+{
+    "reference_no": "PO-2026-001",
+    "type": "INBOUND",
+    "entity_name": "PT Supplier Beras",
+    "notes": "Restock bulanan",
+    "items": [
+    { "product_id": 1, "quantity": 50, "unit_price": 70000 }
+    ]
+}

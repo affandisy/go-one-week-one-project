@@ -25,6 +25,10 @@ func main() {
 	userService := services.NewUserService(userRepo)
 	userHandler := handlers.NewUserHandler(userService)
 
+	txRepo := repositories.NewTransactionRepository(db)
+	txService := services.NewTransactionService(txRepo, productRepo)
+	txHandler := handlers.NewTransactionHandler(txService)
+
 	app := fiber.New()
 	app.Use(logger.New())
 
@@ -35,7 +39,7 @@ func main() {
 	// 	})
 	// })
 
-	routes.SetupRoutes(app, productHandler, userHandler)
+	routes.SetupRoutes(app, productHandler, userHandler, txHandler)
 
 	log.Println("Server WMS berjalan di http://localhost:3000")
 	err := app.Listen(":3000")
