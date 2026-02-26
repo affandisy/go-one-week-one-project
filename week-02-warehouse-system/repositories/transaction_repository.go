@@ -1,12 +1,15 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/models"
 	"gorm.io/gorm"
 )
 
 type TransactionRepository interface {
 	ExecuteTransaction(txData *models.Transaction, stockUpdates map[uint]int) error
+	FindTransactionsByDateRange(startDate, endDate time.Time) ([]models.Transaction, error)
 }
 
 type transactionRepository struct {
@@ -31,4 +34,12 @@ func (r *transactionRepository) ExecuteTransaction(txData *models.Transaction, s
 
 		return nil
 	})
+}
+
+func (r *transactionRepository) FindTransactionsByDateRange(startDate, endDate time.Time) ([]models.Transaction, error) {
+	var transactions []models.Transaction
+
+	err := r.db.Where("transaction_date >= ? AND transaction_date <= ?", startDate, endDate).Find(&transactions).Error
+
+	return transactions, err
 }

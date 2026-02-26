@@ -63,3 +63,17 @@ http://localhost:3000/api/v1/transactions
     { "product_id": 1, "quantity": 50, "unit_price": 70000 }
     ]
 }
+
+# 9. Uji coba GET dashboard
+http://localhost:3000/api/v1/dashboard
+
+{
+    "success": true,
+    "message": "Dashboard WMS Metrics",
+    "data": {
+        "total_product_items": 1,
+        "total_stock_value_idr": 2800000,
+        "critical_stock_items": 0,
+        "today_transactions": 2
+    }
+}

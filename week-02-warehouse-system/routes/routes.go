@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler) {
+func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler, dashboardHandler *handlers.DashboardHandler) {
 	api := app.Group("/api/v1")
 
 	auth := api.Group("/auth")
@@ -14,6 +14,9 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 	auth.Post("/login", userHandler.Login)
 
 	protected := api.Group("/", middlewares.Protected())
+
+	dashboard := protected.Group("/dashboard")
+	dashboard.Get("/", dashboardHandler.GetSummary)
 
 	products := protected.Group("/products")
 	products.Post("/", productHandler.CreateProduct)
