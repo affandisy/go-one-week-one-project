@@ -25,6 +25,8 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 	transactions := protected.Group("/transactions")
 	transactions.Post("/", txHandler.Create)
 
+	transactions.Put("/:id/approve", middlewares.RequireRoles("admin", "manager"), txHandler.Approve)
+
 	adjustments := protected.Group("/adjustments")
 	adjustments.Post("/", adjHandler.Create)
 }

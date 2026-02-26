@@ -85,3 +85,13 @@ http://localhost:3000/api/v1/adjustments
     "qty": -2,
     "reason": "Kemasan rusak saat dipindahkan ke rak"
 }
+
+# 11. Uji Coba Approval Workflow
+POST /api/v1/transactions (role operator) 
+STATUS: draft
+
+PUT /api/v1/transactions/1/approve (role operator)
+STATUS: "Akses Ditolak"
+
+PUT /api/v1/transactions/1/approve (role manager)
+STATUS: "Transaksi Disetujui"

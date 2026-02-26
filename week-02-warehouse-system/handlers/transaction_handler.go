@@ -35,3 +35,25 @@ func (h *TransactionHandler) Create(c *fiber.Ctx) error {
 		"data":    txResult,
 	})
 }
+
+func (h *TransactionHandler) Approve(c *fiber.Ctx) error {
+	txID, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "ID Transaksi tidak valid",
+		})
+	}
+
+	approverID := c.Locals("user_id").(uint)
+
+	err = h.service.ApproveTransaction(uint(txID), approverID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Transaksi berhasil disetujui dan stok telah di-update!",
+	})
+}

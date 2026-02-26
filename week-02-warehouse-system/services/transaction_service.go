@@ -24,6 +24,7 @@ type TransactionItemDTO struct {
 
 type TransactionService interface {
 	ProcessTransaction(req CreateTransactionRequest, userID uint) (*models.Transaction, error)
+	ApproveTransaction(txID uint, approverID uint) error
 }
 
 type transactionService struct {
@@ -48,37 +49,15 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 		ReferenceNo:     req.ReferenceNo,
 		TransactionDate: time.Now(),
 		Type:            req.Type,
-		Status:          "approved",
+		Status:          "draft",
 		EntityName:      req.EntityName,
 		Notes:           req.Notes,
 		CreatedByID:     userID,
 	}
 
-	stockUpdates := make(map[uint]int)
+	// stockUpdates := make(map[uint]int)
 
 	for _, itemReq := range req.Items {
-		if itemReq.Quantity <= 0 {
-			return nil, errors.New("Quantity barang tidak valid")
-		}
-
-		product, err := s.productRepo.FindByID(itemReq.ProductID)
-		if err != nil {
-			return nil, errors.New("Barang dengan ID tersebut tidak ditemukan")
-		}
-
-		newStock := product.CurrentStock
-
-		if req.Type == "INBOUND" {
-			newStock += itemReq.Quantity
-		} else if req.Type == "OUTBOUND" {
-			if product.CurrentStock < itemReq.Quantity {
-				return nil, errors.New("Stok tidak mencukupi untuk barang: " + product.Name)
-			}
-			newStock -= itemReq.Quantity
-		}
-
-		stockUpdates[product.ID] = newStock
-
 		txData.Items = append(txData.Items, models.TransactionItem{
 			ProductID: itemReq.ProductID,
 			Quantity:  itemReq.Quantity,
@@ -87,10 +66,48 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 		})
 	}
 
-	err := s.txRepo.ExecuteTransaction(txData, stockUpdates)
+	err := s.txRepo.ExecuteTransaction(txData, map[uint]int{})
 	if err != nil {
-		return nil, errors.New("Gagal memproses transaksi: " + err.Error())
+		return nil, errors.New("Gagal menyimpan draft transaksi")
 	}
 
 	return txData, nil
+}
+
+func (s *transactionService) ApproveTransaction(txID uint, approverID uint) error {
+	tx, err := s.txRepo.FindByID(txID)
+	if err != nil {
+		return errors.New("Transaksi tidak ditemukan")
+	}
+
+	if tx.Status == "approved" {
+		return errors.New("Transaksi ini sudah pernah di-approve")
+	}
+
+	stockUpdates := make(map[uint]int)
+
+	for _, item := range tx.Items {
+		product, err := s.productRepo.FindByID(item.ProductID)
+		if err != nil {
+			return errors.New("Ada barang yang tidak valid dalam transaksi ini")
+		}
+
+		newStock := product.CurrentStock
+
+		if tx.Type == "INBOUND" {
+			newStock += item.Quantity
+		} else if tx.Type == "OUTBOUND" {
+			if product.CurrentStock < item.Quantity {
+				return errors.New("Persetujuan ditolak! Stok " + product.Name + " saat ini tidak cukup")
+			}
+			newStock -= item.Quantity
+		}
+
+		stockUpdates[product.ID] = newStock
+	}
+
+	tx.Status = "approved"
+	tx.ApprovedByID = &approverID
+
+	return s.txRepo.ApproveAndUpdateStock(tx, stockUpdates)
 }
