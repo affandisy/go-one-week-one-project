@@ -77,3 +77,11 @@ http://localhost:3000/api/v1/dashboard
         "today_transactions": 2
     }
 }
+
+# 10. Uji Coba POST Adjustment
+http://localhost:3000/api/v1/adjustments
+{
+    "product_id": 1,
+    "qty": -2,
+    "reason": "Kemasan rusak saat dipindahkan ke rak"
+}

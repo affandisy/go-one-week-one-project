@@ -32,6 +32,10 @@ func main() {
 	dashboardService := services.NewDashboardService(productRepo, txRepo)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 
+	adjRepo := repositories.NewAdjustmentRepository(db)
+	adjService := services.NewAdjustmentService(adjRepo, productRepo)
+	adjHandler := handlers.NewAdjustmentHandler(adjService)
+
 	app := fiber.New()
 	app.Use(logger.New())
 
@@ -42,7 +46,7 @@ func main() {
 	// 	})
 	// })
 
-	routes.SetupRoutes(app, productHandler, userHandler, txHandler, dashboardHandler)
+	routes.SetupRoutes(app, productHandler, userHandler, txHandler, dashboardHandler, adjHandler)
 
 	log.Println("Server WMS berjalan di http://localhost:3000")
 	err := app.Listen(":3000")
