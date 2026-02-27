@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler, dashboardHandler *handlers.DashboardHandler, adjHandler *handlers.AdjustmentHandler, analyticsHandler *handlers.AnalyticsHandler) {
+func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler, dashboardHandler *handlers.DashboardHandler, adjHandler *handlers.AdjustmentHandler, analyticsHandler *handlers.AnalyticsHandler, partnerHandler *handlers.PartnerHandler) {
 	api := app.Group("/api/v1")
 
 	auth := api.Group("/auth")
@@ -21,6 +21,7 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 	products := protected.Group("/products")
 	products.Post("/", productHandler.CreateProduct)
 	products.Get("/", productHandler.GetAllProducts)
+	products.Get("/page", productHandler.GetProductsPaginated)
 
 	transactions := protected.Group("/transactions")
 	transactions.Post("/", txHandler.Create)
@@ -32,4 +33,8 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 
 	analytics := protected.Group("/analytics", middlewares.RequireRoles("admin", "manager"))
 	analytics.Get("/best-sellers", analyticsHandler.GetBestSellers)
+
+	partners := protected.Group("/partners")
+	partners.Post("/", partnerHandler.Create)
+	partners.Get("/", partnerHandler.GetAll)
 }

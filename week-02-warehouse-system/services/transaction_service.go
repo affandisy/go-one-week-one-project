@@ -11,7 +11,7 @@ import (
 type CreateTransactionRequest struct {
 	ReferenceNo string               `json:"reference_no"`
 	Type        string               `json:"type"` // "INBOUND" atau "OUTBOUND"
-	EntityName  string               `json:"entity_name"`
+	PartnerID   uint                 `json:"partner_id"`
 	Notes       string               `json:"notes"`
 	Items       []TransactionItemDTO `json:"items"`
 }
@@ -30,10 +30,11 @@ type TransactionService interface {
 type transactionService struct {
 	txRepo      repositories.TransactionRepository
 	productRepo repositories.ProductRepository
+	partnerRepo repositories.PartnerRepository
 }
 
-func NewTransactionService(txRepo repositories.TransactionRepository, productRepo repositories.ProductRepository) TransactionService {
-	return &transactionService{txRepo: txRepo, productRepo: productRepo}
+func NewTransactionService(txRepo repositories.TransactionRepository, productRepo repositories.ProductRepository, partnerRepo repositories.PartnerRepository) TransactionService {
+	return &transactionService{txRepo: txRepo, productRepo: productRepo, partnerRepo: partnerRepo}
 }
 
 func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, userID uint) (*models.Transaction, error) {
@@ -45,12 +46,25 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 		return nil, errors.New("Tipe transaksi harus INBOUND atau OUTBOUND")
 	}
 
+	partner, err := s.partnerRepo.FindByID(req.PartnerID)
+	if err != nil {
+		return nil, errors.New("Partner (Supplier/Customer) tidak ditemukan")
+	}
+
+	if req.Type == "INBOUND" && partner.Type != "SUPPLIER" {
+		return nil, errors.New("Transaksi INBOUND hanya dapat dilakukan dari partner bertipe SUPPLIER")
+	}
+
+	if req.Type == "OUTBOUND" && partner.Type != "CUSTOMER" {
+		return nil, errors.New("Transaksi OUTBOUND hanya dapat dilakukan ke partner bertipe CUSTOMER")
+	}
+
 	txData := &models.Transaction{
 		ReferenceNo:     req.ReferenceNo,
 		TransactionDate: time.Now(),
 		Type:            req.Type,
 		Status:          "draft",
-		EntityName:      req.EntityName,
+		PartnerID:       req.PartnerID,
 		Notes:           req.Notes,
 		CreatedByID:     userID,
 	}
@@ -66,7 +80,7 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 		})
 	}
 
-	err := s.txRepo.ExecuteTransaction(txData, map[uint]int{})
+	err = s.txRepo.ExecuteTransaction(txData, map[uint]int{})
 	if err != nil {
 		return nil, errors.New("Gagal menyimpan draft transaksi")
 	}

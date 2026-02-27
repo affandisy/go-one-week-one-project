@@ -117,3 +117,33 @@ GET http://localhost:3000/api/v1/analytics/best-sellers?days=30&limit=3
         ]
     }
 }
+
+# 13. Uji Coba POST Data Supplier
+POST http://localhost:3000/api/v1/partners
+{
+    "name": "PT Indofood Makmur",
+    "type": "SUPPLIER",
+    "phone": "08123456789",
+    "address": "Kawasan Industri MM2100"
+}
+
+# 14. Uji Coba POST Data Customer
+POST http://localhost:3000/api/v1/partners
+{
+    "name": "Toko Kelontong Berkah",
+    "type": "CUSTOMER",
+    "phone": "08987654321",
+    "address": "Jl. Sudirman No. 10"
+}
+
+# 15. Uji Coba Transaksi Inbound dengan Validasi Silang
+POST http://localhost:3000/api/v1/transactions
+{
+    "reference_no": "PO-TEST-001",
+    "type": "INBOUND",
+    "partner_id": 2, 
+    "notes": "Tes Inbound dengan ID Customer",
+    "items": [
+    { "product_id": 1, "quantity": 10, "unit_price": 50000 }
+    ]
+}

@@ -56,3 +56,23 @@ func (h *ProductHandler) GetAllProducts(c *fiber.Ctx) error {
 		"data":    products,
 	})
 }
+
+func (h *ProductHandler) GetProductsPaginated(c *fiber.Ctx) error {
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+
+	result, err := h.service.GetAllProductsPaginated(page, limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"message": "Gagal mengambil data produk",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"message": "Berhasil memuat halaman produk",
+		"data":    result,
+	})
+}

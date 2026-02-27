@@ -39,18 +39,20 @@ type Product struct {
 
 // 3. Model Transaksi Utama (Inbound/Outbound)
 type Transaction struct {
-	ID              uint              `gorm:"primaryKey" json:"id"`
-	ReferenceNo     string            `gorm:"type:varchar(50);uniqueIndex;not null" json:"reference_no"` // Nomor PO/Invoice
-	TransactionDate time.Time         `gorm:"not null" json:"transaction_date"`
-	Type            string            `gorm:"type:varchar(20);not null" json:"type"`                   // INBOUND, OUTBOUND
-	Status          string            `gorm:"type:varchar(20);not null;default:'draft'" json:"status"` // draft, approved, rejected
-	EntityName      string            `gorm:"type:varchar(100)" json:"entity_name"`                    // Nama Supplier / Customer
-	Notes           string            `gorm:"type:text" json:"notes"`
-	CreatedByID     uint              `gorm:"not null" json:"created_by_id"`         // Siapa yang input
-	ApprovedByID    *uint             `json:"approved_by_id"`                        // Siapa yang approve (bisa null)
-	Items           []TransactionItem `gorm:"foreignKey:TransactionID" json:"items"` // Relasi 1-to-Many ke detail barang
-	CreatedAt       time.Time         `json:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"`
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	ReferenceNo     string    `gorm:"type:varchar(50);uniqueIndex;not null" json:"reference_no"` // Nomor PO/Invoice
+	TransactionDate time.Time `gorm:"not null" json:"transaction_date"`
+	Type            string    `gorm:"type:varchar(20);not null" json:"type"`                   // INBOUND, OUTBOUND
+	Status          string    `gorm:"type:varchar(20);not null;default:'draft'" json:"status"` // draft, approved, rejected
+	// EntityName      string            `gorm:"type:varchar(100)" json:"entity_name"`                    // Nama Supplier / Customer
+	PartnerID    uint              `gorm:"not null" json:"partner_id"`
+	Partner      Partner           `gorm:"foreignKey:PartnerID" json:"partner"`
+	Notes        string            `gorm:"type:text" json:"notes"`
+	CreatedByID  uint              `gorm:"not null" json:"created_by_id"`         // Siapa yang input
+	ApprovedByID *uint             `json:"approved_by_id"`                        // Siapa yang approve (bisa null)
+	Items        []TransactionItem `gorm:"foreignKey:TransactionID" json:"items"` // Relasi 1-to-Many ke detail barang
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
 }
 
 // 4. Model Detail Barang dalam Transaksi
