@@ -10,6 +10,7 @@ type ProductRepository interface {
 	FindAll() ([]models.Product, error)
 	FindByID(id uint) (*models.Product, error)
 	Update(product *models.Product) error
+	FindAllPaginated(limit int, offset int) ([]models.Product, int64, error)
 }
 
 type productRepository struct {
@@ -40,4 +41,15 @@ func (r *productRepository) FindByID(id uint) (*models.Product, error) {
 
 func (r *productRepository) Update(product *models.Product) error {
 	return r.db.Save(product).Error
+}
+
+func (r *productRepository) FindAllPaginated(limit int, offset int) ([]models.Product, int64, error) {
+	var products []models.Product
+	var total int64
+
+	r.db.Model(&models.Product{}).Count(&total)
+
+	err := r.db.Limit(limit).Offset(offset).Find(&products).Error
+
+	return products, total, err
 }

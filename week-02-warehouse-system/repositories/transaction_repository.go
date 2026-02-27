@@ -12,6 +12,7 @@ type TransactionRepository interface {
 	FindTransactionsByDateRange(startDate, endDate time.Time) ([]models.Transaction, error)
 	FindByID(id uint) (*models.Transaction, error)
 	ApproveAndUpdateStock(tx *models.Transaction, stockUpdates map[uint]int) error
+	FindOutboundItemsByDate(startDate, endDate time.Time) ([]models.TransactionItem, error)
 }
 
 type transactionRepository struct {
@@ -68,4 +69,14 @@ func (r *transactionRepository) ApproveAndUpdateStock(tx *models.Transaction, st
 
 		return nil
 	})
+}
+
+func (r *transactionRepository) FindOutboundItemsByDate(startDate, endDate time.Time) ([]models.TransactionItem, error) {
+	var items []models.TransactionItem
+
+	err := r.db.Joins("JOIN transactions ON transactions.id = transaction_items.transaction_id").
+		Where("transactions.type = ? AND transactions.transaction_date >= ? AND transactions.transaction_date <= ?", "OUTBOUND", startDate, endDate).
+		Preload("Product").Find(&items).Error
+
+	return items, err
 }

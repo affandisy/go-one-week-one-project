@@ -95,3 +95,25 @@ STATUS: "Akses Ditolak"
 
 PUT /api/v1/transactions/1/approve (role manager)
 STATUS: "Transaksi Disetujui"
+
+# 12. Uji Coba GET Analyitics
+GET http://localhost:3000/api/v1/analytics/best-sellers?days=30&limit=3
+
+{
+    "success": true,
+    "message": "Berhasil memuat Top Best Seller",
+    "data": {
+        "limit": 3,
+        "periode_hari": 30,
+        "items": [
+            {
+                "product_name": "Beras Premium 5Kg",
+                "total_out": 150
+            },
+            {
+                "product_name": "Minyak Goreng 2L",
+                "total_out": 85
+            }
+        ]
+    }
+}

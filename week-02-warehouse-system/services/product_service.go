@@ -18,9 +18,17 @@ type CreateProductRequest struct {
 	MaxStock    int     `json:"max_stock"`
 }
 
+type PaginatedResponse struct {
+	Data       interface{} `json:"data"`
+	Total      int64       `json:"total"`
+	Page       int         `json:"page"`
+	TotalPages int         `json:"total_pages"`
+}
+
 type ProductService interface {
 	CreateProduct(req CreateProductRequest) (*models.Product, error)
 	GetAllProducts() ([]models.Product, error)
+	GetAllProductsPaginated(page int, limit int) (PaginatedResponse, error)
 }
 
 type productService struct {
@@ -29,6 +37,35 @@ type productService struct {
 
 func NewProductService(repo repositories.ProductRepository) ProductService {
 	return &productService{repo: repo}
+}
+
+func (s *productService) GetAllProductsPaginated(page int, limit int) (PaginatedResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	products, total, err := s.repo.FindAllPaginated(limit, offset)
+	if err != nil {
+		return PaginatedResponse{}, err
+	}
+
+	totalPages := int(total) / limit
+	if int(total)%limit != 0 {
+		totalPages++
+	}
+
+	return PaginatedResponse{
+		Data:       products,
+		Total:      total,
+		Page:       page,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (s *productService) CreateProduct(req CreateProductRequest) (*models.Product, error) {
