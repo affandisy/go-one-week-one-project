@@ -147,3 +147,19 @@ POST http://localhost:3000/api/v1/transactions
     { "product_id": 1, "quantity": 10, "unit_price": 50000 }
     ]
 }
+
+# 16. Uji Coba Opname Bulanan
+POST http://localhost:3000/api/v1/opname
+{
+    "notes": "Opname Rutin Akhir Bulan Februari 2026",
+    "items": [
+    {
+        "product_id": 1,
+        "actual_qty": 48
+    },
+    {
+        "product_id": 2,
+        "actual_qty": 10
+    }
+    ]
+}
