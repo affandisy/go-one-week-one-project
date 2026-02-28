@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler, dashboardHandler *handlers.DashboardHandler, adjHandler *handlers.AdjustmentHandler, analyticsHandler *handlers.AnalyticsHandler, partnerHandler *handlers.PartnerHandler, opnameHandler *handlers.OpnameHandler) {
+func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler, dashboardHandler *handlers.DashboardHandler, adjHandler *handlers.AdjustmentHandler, analyticsHandler *handlers.AnalyticsHandler, partnerHandler *handlers.PartnerHandler, opnameHandler *handlers.OpnameHandler, reportHandler *handlers.ReportHandler) {
 	api := app.Group("/api/v1")
 
 	auth := api.Group("/auth")
@@ -40,4 +40,8 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 
 	opname := protected.Group("/opname")
 	opname.Post("/", middlewares.RequireRoles("admin", "manager"), opnameHandler.ProcessOpname)
+
+	reports := protected.Group("/reports", middlewares.RequireRoles("admin", "manager"))
+	reports.Get("/transactions/csv", reportHandler.DonwloadMonthlyCSV)
+
 }

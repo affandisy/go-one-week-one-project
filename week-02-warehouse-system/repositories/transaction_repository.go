@@ -42,7 +42,7 @@ func (r *transactionRepository) ExecuteTransaction(txData *models.Transaction, s
 func (r *transactionRepository) FindTransactionsByDateRange(startDate, endDate time.Time) ([]models.Transaction, error) {
 	var transactions []models.Transaction
 
-	err := r.db.Where("transaction_date >= ? AND transaction_date <= ?", startDate, endDate).Find(&transactions).Error
+	err := r.db.Preload("Partner").Preload("Items").Where("transaction_date >= ? AND transaction_date <= ?", startDate, endDate).Find(&transactions).Error
 
 	return transactions, err
 }

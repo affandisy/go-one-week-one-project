@@ -163,3 +163,6 @@ POST http://localhost:3000/api/v1/opname
     }
     ]
 }
+
+# 17. Uji Coba Unduh File Laporan Stok
+GET http://localhost:3000/api/v1/reports/transactions/csv?month=2&year=2026
