@@ -43,6 +43,7 @@ func ConnectDatabase() {
 		&models.TransactionItem{},
 		&models.StockAdjustment{},
 		&models.Partner{},
+		&models.Location{},
 	)
 
 	if err != nil {

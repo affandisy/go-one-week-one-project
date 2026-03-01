@@ -49,6 +49,10 @@ func main() {
 	reportService := services.NewReportService(txRepo)
 	reportHandler := handlers.NewReportHandler(reportService)
 
+	locationRepo := repositories.NewLocationRepository(db)
+	locationService := services.NewLocationService(locationRepo)
+	locationHandler := handlers.NewLocationHandler(locationService)
+
 	app := fiber.New()
 	app.Use(logger.New())
 
@@ -59,7 +63,7 @@ func main() {
 	// 	})
 	// })
 
-	routes.SetupRoutes(app, productHandler, userHandler, txHandler, dashboardHandler, adjHandler, analyticsHandler, partnerHandler, opnameHandler, reportHandler)
+	routes.SetupRoutes(app, productHandler, userHandler, txHandler, dashboardHandler, adjHandler, analyticsHandler, partnerHandler, opnameHandler, reportHandler, locationHandler)
 
 	log.Println("Server WMS berjalan di http://localhost:3000")
 	err := app.Listen(":3000")

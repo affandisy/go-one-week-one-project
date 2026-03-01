@@ -31,6 +31,8 @@ type Product struct {
 	MinStock     int            `gorm:"not null;default:0" json:"min_stock"`
 	MaxStock     int            `gorm:"not null;default:0" json:"max_stock"`
 	CurrentStock int            `gorm:"not null;default:0" json:"current_stock"`
+	LocationID   *uint          `json:"location_id"`
+	Location     Location       `gorm:"foreignKey:LocationID" json:"location"`
 	IsActive     bool           `gorm:"default:true" json:"is_active"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
