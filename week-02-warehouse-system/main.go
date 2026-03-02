@@ -29,8 +29,10 @@ func main() {
 	partnerService := services.NewPartnerService(partnerRepo)
 	partnerHandler := handlers.NewPartnerHandler(partnerService)
 
+	batchRepo := repositories.NewBatchRepository(db)
+
 	txRepo := repositories.NewTransactionRepository(db)
-	txService := services.NewTransactionService(txRepo, productRepo, partnerRepo)
+	txService := services.NewTransactionService(txRepo, productRepo, partnerRepo, batchRepo)
 	txHandler := handlers.NewTransactionHandler(txService)
 
 	dashboardService := services.NewDashboardService(productRepo, txRepo)

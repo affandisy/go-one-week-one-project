@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/models"
@@ -17,9 +18,11 @@ type CreateTransactionRequest struct {
 }
 
 type TransactionItemDTO struct {
-	ProductID uint    `json:"product_id"`
-	Quantity  int     `json:"quantity"`
-	UnitPrice float64 `json:"unit_price"`
+	ProductID  uint    `json:"product_id"`
+	Quantity   int     `json:"quantity"`
+	UnitPrice  float64 `json:"unit_price"`
+	BatchNo    string  `json:"batch_no"`
+	ExpiryDate string  `json:"expiry_date"`
 }
 
 type TransactionService interface {
@@ -31,10 +34,11 @@ type transactionService struct {
 	txRepo      repositories.TransactionRepository
 	productRepo repositories.ProductRepository
 	partnerRepo repositories.PartnerRepository
+	batchRepo   repositories.BatchRepository
 }
 
-func NewTransactionService(txRepo repositories.TransactionRepository, productRepo repositories.ProductRepository, partnerRepo repositories.PartnerRepository) TransactionService {
-	return &transactionService{txRepo: txRepo, productRepo: productRepo, partnerRepo: partnerRepo}
+func NewTransactionService(txRepo repositories.TransactionRepository, productRepo repositories.ProductRepository, partnerRepo repositories.PartnerRepository, batchRepo repositories.BatchRepository) TransactionService {
+	return &transactionService{txRepo: txRepo, productRepo: productRepo, partnerRepo: partnerRepo, batchRepo: batchRepo}
 }
 
 func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, userID uint) (*models.Transaction, error) {
@@ -99,6 +103,7 @@ func (s *transactionService) ApproveTransaction(txID uint, approverID uint) erro
 	}
 
 	stockUpdates := make(map[uint]int)
+	batchUpdates := []models.ProductBatch{}
 
 	for _, item := range tx.Items {
 		product, err := s.productRepo.FindByID(item.ProductID)
@@ -112,9 +117,37 @@ func (s *transactionService) ApproveTransaction(txID uint, approverID uint) erro
 			newStock += item.Quantity
 		} else if tx.Type == "OUTBOUND" {
 			if product.CurrentStock < item.Quantity {
-				return errors.New("Persetujuan ditolak! Stok " + product.Name + " saat ini tidak cukup")
+				return errors.New("Stok tidak cukup")
 			}
 			newStock -= item.Quantity
+
+			batches, _ := s.batchRepo.FindByProductID(product.ID)
+
+			sort.Slice(batches, func(i, j int) bool {
+				return batches[i].ExpiryDate.Before(batches[j].ExpiryDate)
+			})
+
+			qtyNeeded := item.Quantity
+
+			for _, batch := range batches {
+				if qtyNeeded <= 0 {
+					break
+				}
+
+				take := batch.Stock
+				if qtyNeeded < batch.Stock {
+					take = qtyNeeded
+				}
+
+				batch.Stock -= take
+				qtyNeeded -= take
+
+				batchUpdates = append(batchUpdates, batch)
+			}
+
+			if qtyNeeded > 0 {
+				return errors.New("Sistem anomali: Stok global cukup, tetapi stok batch tidak cukup")
+			}
 		}
 
 		stockUpdates[product.ID] = newStock

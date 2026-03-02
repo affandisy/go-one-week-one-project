@@ -174,3 +174,8 @@ POST http://localhost:3000/api/v1/locations
     "name": "Rak Makanan Kering Baris A",
     "description": "Kapasitas maksimal 500kg"
 }
+
+# 19. Uji Coba Batch Proses
+INBOUND Batch 1: Masukkan 50 sak Beras, Batch: BRS-01, Expiry: 2026-12-01.
+INBOUND Batch 2: Masukkan 50 sak Beras, Batch: BRS-02, Expiry: 2026-06-01 (Catatan: Batch 2 ini kedaluwarsanya lebih cepat!).
+OUTBOUND: Lakukan permintaan pengeluaran barang sebanyak 60 sak Beras.
