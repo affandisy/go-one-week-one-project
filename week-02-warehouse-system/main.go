@@ -1,12 +1,9 @@
 package main
 
 import (
-	"log"
-
-	"github.com/gofiber/fiber/v2/middleware/logger"
-
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/config"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/handlers"
+	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/middlewares"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/repositories"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/routes"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/services"
@@ -14,6 +11,8 @@ import (
 )
 
 func main() {
+	config.InitLogger()
+
 	config.ConnectDatabase()
 	db := config.DB
 
@@ -55,8 +54,10 @@ func main() {
 	locationService := services.NewLocationService(locationRepo)
 	locationHandler := handlers.NewLocationHandler(locationService)
 
-	app := fiber.New()
-	app.Use(logger.New())
+	app := fiber.New(fiber.Config{
+		DisableStartupMessage: true,
+	})
+	app.Use(middlewares.ActivityLogger())
 
 	// app.Get("/", func(c *fiber.Ctx) error {
 	// 	return c.JSON(fiber.Map{
@@ -67,9 +68,9 @@ func main() {
 
 	routes.SetupRoutes(app, productHandler, userHandler, txHandler, dashboardHandler, adjHandler, analyticsHandler, partnerHandler, opnameHandler, reportHandler, locationHandler)
 
-	log.Println("Server WMS berjalan di http://localhost:3000")
+	config.Log.Info().Msg("🚀 Server WMS berjalan di http://localhost:3000")
 	err := app.Listen(":3000")
 	if err != nil {
-		log.Fatal("Server error: ", err)
+		config.Log.Fatal().Err(err).Msg("Server mati secara tidak wajar")
 	}
 }

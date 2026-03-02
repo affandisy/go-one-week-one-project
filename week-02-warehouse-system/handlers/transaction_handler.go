@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/config"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -52,6 +53,13 @@ func (h *TransactionHandler) Approve(c *fiber.Ctx) error {
 			"error": err.Error(),
 		})
 	}
+
+	config.Log.Info().
+		Str("type", "business_audit").
+		Str("action", "APPROVE_TRANSACTION").
+		Uint("transaction_id", uint(txID)).
+		Uint("approver_user_id", approverID).
+		Msg("Transaksi berhasil disetujui dan stok dipotong")
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Transaksi berhasil disetujui dan stok telah di-update!",
