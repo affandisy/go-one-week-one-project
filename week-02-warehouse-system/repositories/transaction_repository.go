@@ -13,6 +13,7 @@ type TransactionRepository interface {
 	FindByID(id uint) (*models.Transaction, error)
 	ApproveAndUpdateStock(tx *models.Transaction, stockUpdates map[uint]int) error
 	FindOutboundItemsByDate(startDate, endDate time.Time) ([]models.TransactionItem, error)
+	FindTransactionsPaginatedByDate(startDate, endDate time.Time, limit int, offset int) ([]models.Transaction, error)
 }
 
 type transactionRepository struct {
@@ -79,4 +80,15 @@ func (r *transactionRepository) FindOutboundItemsByDate(startDate, endDate time.
 		Preload("Product").Find(&items).Error
 
 	return items, err
+}
+
+func (r *transactionRepository) FindTransactionsPaginatedByDate(startDate, endDate time.Time, limit int, offset int) ([]models.Transaction, error) {
+	var transactions []models.Transaction
+
+	err := r.db.Preload("Partner").Preload("Items").Where("transaction_date >= ? AND transaction_date <= ?", startDate, endDate).
+		Limit(limit).
+		Offset(offset).
+		Find(&transactions).Error
+
+	return transactions, err
 }

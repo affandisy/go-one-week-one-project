@@ -34,3 +34,21 @@ func (h *ReportHandler) DonwloadMonthlyCSV(c *fiber.Ctx) error {
 
 	return c.Send(csvData)
 }
+
+func (h *ReportHandler) TriggerExportCSV(c *fiber.Ctx) error {
+	month := c.QueryInt("month", int(time.Now().Month()))
+	year := c.QueryInt("year", time.Now().Year())
+	email := "manager@perusahaan.com"
+
+	err := h.service.TriggerMonthlyTransactionExport(month, year, email)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal memulai pembuatan laporan",
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"success": true,
+		"message": "Permintaan export laporan sedang diproses. Tautan unduhan akan dikirimkan ke email Anda saat selesai.",
+	})
+}

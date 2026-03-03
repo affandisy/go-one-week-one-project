@@ -43,6 +43,7 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 
 	reports := protected.Group("/reports", middlewares.RequireRoles("admin", "manager"))
 	reports.Get("/transactions/csv", reportHandler.DonwloadMonthlyCSV)
+	reports.Get("/transactions/batch-csv", reportHandler.TriggerExportCSV)
 
 	locations := protected.Group("/locations")
 	locations.Post("/", middlewares.RequireRoles("admin", "manager"), locationHandler.Create)
