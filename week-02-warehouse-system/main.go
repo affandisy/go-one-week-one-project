@@ -16,6 +16,8 @@ func main() {
 	config.ConnectDatabase()
 	db := config.DB
 
+	config.ConnectRedis()
+
 	productRepo := repositories.NewProductRepository(db)
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)

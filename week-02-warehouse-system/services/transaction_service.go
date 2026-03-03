@@ -2,9 +2,11 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
+	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/config"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/models"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/repositories"
 )
@@ -102,6 +104,36 @@ func (s *transactionService) ApproveTransaction(txID uint, approverID uint) erro
 		return errors.New("Transaksi ini sudah pernah di-approve")
 	}
 
+	productIDsMap := make(map[uint]bool)
+	var productIDs []int
+	for _, item := range tx.Items {
+		if !productIDsMap[item.ProductID] {
+			productIDsMap[item.ProductID] = true
+			productIDs = append(productIDs, int(item.ProductID))
+		}
+	}
+
+	sort.Ints(productIDs)
+
+	var lockedKeys []string
+
+	defer func() {
+		for _, key := range lockedKeys {
+			config.RedisClient.Del(config.Ctx, key)
+		}
+	}()
+
+	for _, id := range productIDs {
+		lockKey := fmt.Sprintf("lock:product:%d", id)
+
+		isLocked, err := config.RedisClient.SetNX(config.Ctx, lockKey, "locked", 10*time.Second).Result()
+		if err != nil || !isLocked {
+			return errors.New("Sistem sedang memproses transaksi untuk barang ini. Silakan coba beberapa saat lagi (Race Condition dicegah)")
+		}
+
+		lockedKeys = append(lockedKeys, lockKey)
+	}
+
 	stockUpdates := make(map[uint]int)
 	batchUpdates := []models.ProductBatch{}
 
@@ -112,12 +144,15 @@ func (s *transactionService) ApproveTransaction(txID uint, approverID uint) erro
 		}
 
 		newStock := product.CurrentStock
+		if val, exists := stockUpdates[product.ID]; exists {
+			newStock = val
+		}
 
 		if tx.Type == "INBOUND" {
 			newStock += item.Quantity
 		} else if tx.Type == "OUTBOUND" {
-			if product.CurrentStock < item.Quantity {
-				return errors.New("Stok tidak cukup")
+			if newStock < item.Quantity {
+				return errors.New("Persetujuan ditolak! Stok " + product.Name + " tidak mencukupi saat ini")
 			}
 			newStock -= item.Quantity
 
@@ -156,5 +191,10 @@ func (s *transactionService) ApproveTransaction(txID uint, approverID uint) erro
 	tx.Status = "approved"
 	tx.ApprovedByID = &approverID
 
-	return s.txRepo.ApproveAndUpdateStock(tx, stockUpdates)
+	err = s.txRepo.ApproveAndUpdateStock(tx, stockUpdates)
+	if err != nil {
+		return errors.New("Gagal menyimpan persetujuan ke database")
+	}
+
+	return nil
 }
