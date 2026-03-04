@@ -7,6 +7,7 @@ import (
 
 type BatchRepository interface {
 	FindByProductID(productID uint) ([]models.ProductBatch, error)
+	UpdateBatch(batch *models.ProductBatch) error
 }
 
 type batchRepository struct {
@@ -23,4 +24,8 @@ func (r *batchRepository) FindByProductID(productID uint) ([]models.ProductBatch
 	err := r.db.Where("product_id = ? AND stock > 0", productID).Find(&batches).Error
 
 	return batches, err
+}
+
+func (r *batchRepository) UpdateBatch(batch *models.ProductBatch) error {
+	return r.db.Save(batch).Error
 }

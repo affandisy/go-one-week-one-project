@@ -30,10 +30,14 @@ func main() {
 	partnerService := services.NewPartnerService(partnerRepo)
 	partnerHandler := handlers.NewPartnerHandler(partnerService)
 
+	whRepo := repositories.NewWarehouseRepository(db)
+	whStockRepo := repositories.NewWarehouseStockRepository(db)
+	whHandler := handlers.NewWarehouseHandler(whRepo)
+
 	batchRepo := repositories.NewBatchRepository(db)
 
 	txRepo := repositories.NewTransactionRepository(db)
-	txService := services.NewTransactionService(txRepo, productRepo, partnerRepo, batchRepo)
+	txService := services.NewTransactionService(txRepo, productRepo, partnerRepo, batchRepo, whRepo, whStockRepo)
 	txHandler := handlers.NewTransactionHandler(txService)
 
 	dashboardService := services.NewDashboardService(productRepo, txRepo)
@@ -70,7 +74,7 @@ func main() {
 	// 	})
 	// })
 
-	routes.SetupRoutes(app, productHandler, userHandler, txHandler, dashboardHandler, adjHandler, analyticsHandler, partnerHandler, opnameHandler, reportHandler, locationHandler)
+	routes.SetupRoutes(app, productHandler, userHandler, txHandler, dashboardHandler, adjHandler, analyticsHandler, partnerHandler, opnameHandler, reportHandler, locationHandler, whHandler)
 
 	config.Log.Info().Msg("🚀 Server WMS berjalan di http://localhost:3000")
 	err := app.Listen(":3000")

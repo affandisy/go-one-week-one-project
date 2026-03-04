@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler, dashboardHandler *handlers.DashboardHandler, adjHandler *handlers.AdjustmentHandler, analyticsHandler *handlers.AnalyticsHandler, partnerHandler *handlers.PartnerHandler, opnameHandler *handlers.OpnameHandler, reportHandler *handlers.ReportHandler, locationHandler *handlers.LocationHandler) {
+func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHandler *handlers.UserHandler, txHandler *handlers.TransactionHandler, dashboardHandler *handlers.DashboardHandler, adjHandler *handlers.AdjustmentHandler, analyticsHandler *handlers.AnalyticsHandler, partnerHandler *handlers.PartnerHandler, opnameHandler *handlers.OpnameHandler, reportHandler *handlers.ReportHandler, locationHandler *handlers.LocationHandler, warehouseHandler *handlers.WarehouseHandler) {
 	api := app.Group("/api/v1")
 
 	auth := api.Group("/auth")
@@ -53,5 +53,9 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 	locations := protected.Group("/locations")
 	locations.Post("/", middlewares.RequireRoles("admin", "manager"), locationHandler.Create)
 	locations.Get("/", locationHandler.GetAll)
+
+	warehouses := protected.Group("/warehouses")
+	warehouses.Post("/", middlewares.RequireRoles("admin"), warehouseHandler.Create)
+	warehouses.Get("/", warehouseHandler.GetAll)
 
 }

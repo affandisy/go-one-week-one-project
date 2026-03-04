@@ -190,3 +190,51 @@ Klik Send.
 
 # 21. Uji Coba Movement Analytics
 GET http://localhost:3000/api/v1/reports/movement-analytics?month=3&year=2026
+
+# 22. Uji Coba Multi-Warehouse Support
+1. POST http://localhost:3000/api/v1/warehouses
+{
+    "code": "JKT-01", 
+    "name": "Gudang Utama Jakarta"
+}
+2. POST http://localhost:3000/api/v1/warehouses
+{
+    "code": "SBY-01", 
+    "name": "Gudang Cabang Surabaya"
+}
+INBOUND (Memasukkan Barang ke Jakarta)
+3. POST http://localhost:3000/api/v1/transactions
+{
+    "reference_no": "PO-IN-001",
+    "type": "INBOUND",
+    "warehouse_id": 1, 
+    "partner_id": 1,
+    "notes": "Barang masuk ke Jakarta",
+    "items": [
+        {
+            "product_id": 1,
+            "quantity": 50,
+            "unit_price": 10000,
+            "batch_no": "BATCH-JKT-A",
+            "expiry_date": "2026-12-31"
+        }
+    ]
+}
+4. POST http://localhost:3000/api/v1/transactions/1/approve
+5. OUTBOUND (Memindahkan Barang ke Surabaya)
+POST http://localhost:3000/api/v1/transactions
+{
+    "reference_no": "TRF-001",
+    "type": "TRANSFER",
+    "warehouse_id": 1, 
+    "target_warehouse_id": 2, 
+    "notes": "Pindah stok ke Surabaya untuk persiapan promo",
+    "items": [
+        {
+            "product_id": 1,
+            "quantity": 20,
+            "unit_price": 10000
+        }
+    ]
+}
+6. POST http://localhost:3000/api/v1/transactions/2/approve

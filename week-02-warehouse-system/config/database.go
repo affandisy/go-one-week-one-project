@@ -45,6 +45,8 @@ func ConnectDatabase() {
 		&models.Partner{},
 		&models.Location{},
 		&models.ProductBatch{},
+		&models.Warehouse{},
+		&models.WarehouseStock{},
 	)
 
 	if err != nil {

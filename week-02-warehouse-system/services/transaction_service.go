@@ -12,11 +12,13 @@ import (
 )
 
 type CreateTransactionRequest struct {
-	ReferenceNo string               `json:"reference_no"`
-	Type        string               `json:"type"` // "INBOUND" atau "OUTBOUND"
-	PartnerID   uint                 `json:"partner_id"`
-	Notes       string               `json:"notes"`
-	Items       []TransactionItemDTO `json:"items"`
+	ReferenceNo       string               `json:"reference_no"`
+	Type              string               `json:"type"`
+	WarehouseID       uint                 `json:"warehouse_id"`
+	TargetWarehouseID *uint                `json:"target_warehouse_id"`
+	PartnerID         *uint                `json:"partner_id"`
+	Notes             string               `json:"notes"`
+	Items             []TransactionItemDTO `json:"items"`
 }
 
 type TransactionItemDTO struct {
@@ -37,10 +39,12 @@ type transactionService struct {
 	productRepo repositories.ProductRepository
 	partnerRepo repositories.PartnerRepository
 	batchRepo   repositories.BatchRepository
+	whRepo      repositories.WarehouseRepository
+	whStockRepo repositories.WarehouseStockRepository
 }
 
-func NewTransactionService(txRepo repositories.TransactionRepository, productRepo repositories.ProductRepository, partnerRepo repositories.PartnerRepository, batchRepo repositories.BatchRepository) TransactionService {
-	return &transactionService{txRepo: txRepo, productRepo: productRepo, partnerRepo: partnerRepo, batchRepo: batchRepo}
+func NewTransactionService(txRepo repositories.TransactionRepository, productRepo repositories.ProductRepository, partnerRepo repositories.PartnerRepository, batchRepo repositories.BatchRepository, whRepo repositories.WarehouseRepository, whStockRepo repositories.WarehouseStockRepository) TransactionService {
+	return &transactionService{txRepo: txRepo, productRepo: productRepo, partnerRepo: partnerRepo, batchRepo: batchRepo, whRepo: whRepo, whStockRepo: whStockRepo}
 }
 
 func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, userID uint) (*models.Transaction, error) {
@@ -48,31 +52,50 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 		return nil, errors.New("Transaksi harus memiliki minimal 1 barang")
 	}
 
-	if req.Type != "INBOUND" && req.Type != "OUTBOUND" {
-		return nil, errors.New("Tipe transaksi harus INBOUND atau OUTBOUND")
+	if req.Type != "INBOUND" && req.Type != "OUTBOUND" && req.Type != "TRANSFER" {
+		return nil, errors.New("Tipe transaksi harus INBOUND, OUTBOUND, atau TRANSFER")
 	}
 
-	partner, err := s.partnerRepo.FindByID(req.PartnerID)
-	if err != nil {
-		return nil, errors.New("Partner (Supplier/Customer) tidak ditemukan")
+	if _, err := s.whRepo.FindByID(req.WarehouseID); err != nil {
+		return nil, errors.New("Gudang asal tidak valid")
 	}
 
-	if req.Type == "INBOUND" && partner.Type != "SUPPLIER" {
-		return nil, errors.New("Transaksi INBOUND hanya dapat dilakukan dari partner bertipe SUPPLIER")
-	}
-
-	if req.Type == "OUTBOUND" && partner.Type != "CUSTOMER" {
-		return nil, errors.New("Transaksi OUTBOUND hanya dapat dilakukan ke partner bertipe CUSTOMER")
+	if req.Type == "TRANSFER" {
+		if req.TargetWarehouseID == nil {
+			return nil, errors.New("Gudang tujuan wajib diisi untuk transaksi TRANSFER")
+		}
+		if req.WarehouseID == *req.TargetWarehouseID {
+			return nil, errors.New("Gudang asal dan tujuan tidak boleh sama")
+		}
+		if _, err := s.whRepo.FindByID(*req.TargetWarehouseID); err != nil {
+			return nil, errors.New("Gudang tujuan tidak valid")
+		}
+	} else {
+		if req.PartnerID == nil {
+			return nil, errors.New("Partner (Supplier/Customer) wajib diisi untuk INBOUND/OUTBOUND")
+		}
+		partner, err := s.partnerRepo.FindByID(*req.PartnerID)
+		if err != nil {
+			return nil, errors.New("Partner (Supplier/Customer) tidak ditemukan")
+		}
+		if req.Type == "INBOUND" && partner.Type != "SUPPLIER" {
+			return nil, errors.New("Transaksi INBOUND hanya dapat dilakukan dari partner bertipe SUPPLIER")
+		}
+		if req.Type == "OUTBOUND" && partner.Type != "CUSTOMER" {
+			return nil, errors.New("Transaksi OUTBOUND hanya dapat dilakukan ke partner bertipe CUSTOMER")
+		}
 	}
 
 	txData := &models.Transaction{
-		ReferenceNo:     req.ReferenceNo,
-		TransactionDate: time.Now(),
-		Type:            req.Type,
-		Status:          "draft",
-		PartnerID:       req.PartnerID,
-		Notes:           req.Notes,
-		CreatedByID:     userID,
+		ReferenceNo:       req.ReferenceNo,
+		TransactionDate:   time.Now(),
+		Type:              req.Type,
+		Status:            "draft",
+		WarehouseID:       req.WarehouseID,
+		TargetWarehouseID: req.TargetWarehouseID,
+		PartnerID:         req.PartnerID,
+		Notes:             req.Notes,
+		CreatedByID:       userID,
 	}
 
 	// stockUpdates := make(map[uint]int)
@@ -86,7 +109,7 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 		})
 	}
 
-	err = s.txRepo.ExecuteTransaction(txData, map[uint]int{})
+	err := s.txRepo.ExecuteTransaction(txData, map[uint]int{})
 	if err != nil {
 		return nil, errors.New("Gagal menyimpan draft transaksi")
 	}
@@ -96,46 +119,47 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 
 func (s *transactionService) ApproveTransaction(txID uint, approverID uint) error {
 	tx, err := s.txRepo.FindByID(txID)
-	if err != nil {
-		return errors.New("Transaksi tidak ditemukan")
+	if err != nil || tx.Status == "approved" {
+		return errors.New("Transaksi tidak ditemukan atau sudah disetujui")
 	}
 
-	if tx.Status == "approved" {
-		return errors.New("Transaksi ini sudah pernah di-approve")
-	}
+	var lockKeys []string
+	uniqueKeys := make(map[string]bool)
 
-	productIDsMap := make(map[uint]bool)
-	var productIDs []int
 	for _, item := range tx.Items {
-		if !productIDsMap[item.ProductID] {
-			productIDsMap[item.ProductID] = true
-			productIDs = append(productIDs, int(item.ProductID))
+		keyOrigin := fmt.Sprintf("lock:warehouse:%d:product:%d", tx.WarehouseID, item.ProductID)
+		if !uniqueKeys[keyOrigin] {
+			uniqueKeys[keyOrigin] = true
+			lockKeys = append(lockKeys, keyOrigin)
+		}
+		if tx.Type == "TRANSFER" && tx.TargetWarehouseID != nil {
+			keyTarget := fmt.Sprintf("lock:warehouse:%d:product:%d", *tx.TargetWarehouseID, item.ProductID)
+			if !uniqueKeys[keyTarget] {
+				uniqueKeys[keyTarget] = true
+				lockKeys = append(lockKeys, keyTarget)
+			}
 		}
 	}
 
-	sort.Ints(productIDs)
+	sort.Strings(lockKeys)
 
-	var lockedKeys []string
-
+	var acquiredLocks []string
 	defer func() {
-		for _, key := range lockedKeys {
+		for _, key := range acquiredLocks {
 			config.RedisClient.Del(config.Ctx, key)
 		}
 	}()
 
-	for _, id := range productIDs {
-		lockKey := fmt.Sprintf("lock:product:%d", id)
-
-		isLocked, err := config.RedisClient.SetNX(config.Ctx, lockKey, "locked", 10*time.Second).Result()
+	for _, key := range lockKeys {
+		isLocked, err := config.RedisClient.SetNX(config.Ctx, key, "locked", 10*time.Second).Result()
 		if err != nil || !isLocked {
-			return errors.New("Sistem sedang memproses transaksi untuk barang ini. Silakan coba beberapa saat lagi (Race Condition dicegah)")
+			return errors.New("Sistem sedang memproses transaksi untuk barang ini di gudang terkait. Silakan coba beberapa saat lagi")
 		}
-
-		lockedKeys = append(lockedKeys, lockKey)
+		acquiredLocks = append(acquiredLocks, key)
 	}
 
-	stockUpdates := make(map[uint]int)
-	batchUpdates := []models.ProductBatch{}
+	stockMutations := make(map[string]int)
+	var batchUpdates []models.ProductBatch
 
 	for _, item := range tx.Items {
 		product, err := s.productRepo.FindByID(item.ProductID)
@@ -143,57 +167,62 @@ func (s *transactionService) ApproveTransaction(txID uint, approverID uint) erro
 			return errors.New("Ada barang yang tidak valid dalam transaksi ini")
 		}
 
-		newStock := product.CurrentStock
-		if val, exists := stockUpdates[product.ID]; exists {
-			newStock = val
-		}
-
-		if tx.Type == "INBOUND" {
-			newStock += item.Quantity
-		} else if tx.Type == "OUTBOUND" {
-			if newStock < item.Quantity {
-				return errors.New("Persetujuan ditolak! Stok " + product.Name + " tidak mencukupi saat ini")
+		if tx.Type == "OUTBOUND" || tx.Type == "TRANSFER" {
+			stockData, err := s.whStockRepo.GetStock(tx.WarehouseID, item.ProductID)
+			if err != nil || stockData.Stock < item.Quantity {
+				return fmt.Errorf("Persetujuan ditolak! Stok %s di Gudang Asal tidak mencukupi", product.Name)
 			}
-			newStock -= item.Quantity
+			originKey := fmt.Sprintf("%d_%d", tx.WarehouseID, item.ProductID)
+			stockMutations[originKey] -= item.Quantity
 
+			// Logika FEFO (Hanya saat barang keluar)
 			batches, _ := s.batchRepo.FindByProductID(product.ID)
-
 			sort.Slice(batches, func(i, j int) bool {
 				return batches[i].ExpiryDate.Before(batches[j].ExpiryDate)
 			})
 
 			qtyNeeded := item.Quantity
-
 			for _, batch := range batches {
 				if qtyNeeded <= 0 {
 					break
 				}
-
 				take := batch.Stock
 				if qtyNeeded < batch.Stock {
 					take = qtyNeeded
 				}
-
 				batch.Stock -= take
 				qtyNeeded -= take
-
 				batchUpdates = append(batchUpdates, batch)
 			}
 
 			if qtyNeeded > 0 {
-				return errors.New("Sistem anomali: Stok global cukup, tetapi stok batch tidak cukup")
+				return errors.New("Sistem anomali: Stok gudang cukup, tetapi stok batch FEFO tidak cukup")
 			}
 		}
 
-		stockUpdates[product.ID] = newStock
+		if tx.Type == "INBOUND" {
+			targetKey := fmt.Sprintf("%d_%d", tx.WarehouseID, item.ProductID)
+			stockMutations[targetKey] += item.Quantity
+		}
+		if tx.Type == "TRANSFER" && tx.TargetWarehouseID != nil {
+			targetKey := fmt.Sprintf("%d_%d", *tx.TargetWarehouseID, item.ProductID)
+			stockMutations[targetKey] += item.Quantity
+		}
 	}
 
 	tx.Status = "approved"
 	tx.ApprovedByID = &approverID
 
-	err = s.txRepo.ApproveAndUpdateStock(tx, stockUpdates)
+	err = s.txRepo.ExecuteMultiWarehouseMutation(tx, stockMutations)
 	if err != nil {
-		return errors.New("Gagal menyimpan persetujuan ke database")
+		return errors.New("Gagal menyimpan persetujuan mutasi gudang ke database")
+	}
+
+	for _, b := range batchUpdates {
+		err := s.batchRepo.UpdateBatch(&b)
+		if err != nil {
+			config.Log.Error().Err(err).Msgf("Gagal update stok batch ID %d", b.ID)
+		}
 	}
 
 	return nil

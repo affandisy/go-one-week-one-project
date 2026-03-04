@@ -1,6 +1,9 @@
 package repositories
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/models"
@@ -23,6 +26,7 @@ type TransactionRepository interface {
 	FindOutboundItemsByDate(startDate, endDate time.Time) ([]models.TransactionItem, error)
 	FindTransactionsPaginatedByDate(startDate, endDate time.Time, limit int, offset int) ([]models.Transaction, error)
 	AnalyzeProductMovement(startDate, endDate time.Time) ([]ProductMovementResult, error)
+	ExecuteMultiWarehouseMutation(tx *models.Transaction, stockMutations map[string]int) error
 }
 
 type transactionRepository struct {
@@ -120,4 +124,62 @@ func (r *transactionRepository) AnalyzeProductMovement(startDate, endDate time.T
 		Scan(&results).Error
 
 	return results, err
+}
+
+func (r *transactionRepository) ExecuteMultiWarehouseMutation(tx *models.Transaction, stockMutations map[string]int) error {
+	return r.db.Transaction(func(dbTx *gorm.DB) error {
+		if err := dbTx.Save(tx).Error; err != nil {
+			return err
+		}
+
+		for key, qtyChange := range stockMutations {
+			parts := strings.Split(key, "-")
+			if len(parts) != 2 {
+				return fmt.Errorf("format kunci mutasi tidak valid: %s", key)
+			}
+
+			whID, _ := strconv.ParseUint(parts[0], 10, 32)
+			prodID, _ := strconv.ParseUint(parts[1], 10, 32)
+
+			var whStock models.WarehouseStock
+			err := dbTx.Where("warehouse_id = ? AND product_id = ?", whID, prodID).First(&whStock).Error
+			if err != nil {
+				if err == gorm.ErrRecordNotFound {
+					if qtyChange < 0 {
+						return fmt.Errorf("anomali: mencoba mengurangi stok barang yang tidak ada di gudang %d", whID)
+					}
+
+					whStock = models.WarehouseStock{
+						WarehouseID: uint(whID),
+						ProductID:   uint(prodID),
+						Stock:       qtyChange,
+					}
+					if err := dbTx.Create(&whStock).Error; err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
+			} else {
+				whStock.Stock += qtyChange
+
+				// Validasi lapis terakhir di level database
+				if whStock.Stock < 0 {
+					return fmt.Errorf("stok negatif tidak diizinkan untuk produk %d di gudang %d", prodID, whID)
+				}
+
+				if err := dbTx.Save(&whStock).Error; err != nil {
+					return err
+				}
+			}
+
+			if err := dbTx.Model(&models.Product{}).
+				Where("id = ?", prodID).
+				Update("current_stock", gorm.Expr("current_stock + ?", qtyChange)).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
