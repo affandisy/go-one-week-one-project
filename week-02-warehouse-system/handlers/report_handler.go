@@ -52,3 +52,22 @@ func (h *ReportHandler) TriggerExportCSV(c *fiber.Ctx) error {
 		"message": "Permintaan export laporan sedang diproses. Tautan unduhan akan dikirimkan ke email Anda saat selesai.",
 	})
 }
+
+func (h *ReportHandler) GetMovementAnalytics(c *fiber.Ctx) error {
+	month := c.QueryInt("month", int(time.Now().Month()))
+	year := c.QueryInt("year", time.Now().Year())
+
+	results, err := h.service.GetMovementAnalytics(month, year)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Gagal menarik data analitik pergerakan barang",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"message": fmt.Sprintf("Laporan pergerakan barang periode %02d-%d", month, year),
+		"data":    results,
+	})
+}

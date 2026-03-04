@@ -15,6 +15,7 @@ import (
 type ReportService interface {
 	GenerateMonthlyTransactionCSV(month, year int) ([]byte, error)
 	TriggerMonthlyTransactionExport(month, year int, email string) error
+	GetMovementAnalytics(month, year int) ([]repositories.ProductMovementResult, error)
 }
 
 type reportService struct {
@@ -152,4 +153,16 @@ func (s *reportService) processExportBackground(month, year int, email string) {
 	}
 
 	config.Log.Info().Msgf("Export CSV sukses! Data tersimpan di %s. Siap dikirim ke email %s", filePath, email)
+}
+
+func (s *reportService) GetMovementAnalytics(month, year int) ([]repositories.ProductMovementResult, error) {
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Local)
+	endDate := startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	results, err := s.txRepo.AnalyzeProductMovement(startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	return results, err
 }

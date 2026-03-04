@@ -187,3 +187,6 @@ Di kolom Key, ketik image. Di sebelah kanan Key (tersembunyi), ada dropdown teks
 Di kolom Value, klik tombol Select Files dan pilih gambar berukuran di bawah 2MB.
 Masukkan Token JWT di tab Authorization.
 Klik Send.
+
+# 21. Uji Coba Movement Analytics
+GET http://localhost:3000/api/v1/reports/movement-analytics?month=3&year=2026
