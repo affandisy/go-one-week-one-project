@@ -179,3 +179,11 @@ POST http://localhost:3000/api/v1/locations
 INBOUND Batch 1: Masukkan 50 sak Beras, Batch: BRS-01, Expiry: 2026-12-01.
 INBOUND Batch 2: Masukkan 50 sak Beras, Batch: BRS-02, Expiry: 2026-06-01 (Catatan: Batch 2 ini kedaluwarsanya lebih cepat!).
 OUTBOUND: Lakukan permintaan pengeluaran barang sebanyak 60 sak Beras.
+
+# 20. Uji Coba Upload Gambar Produk & User
+POST http://localhost:3000/api/v1/products/1/image
+Masuk ke tab Body, pilih form-data.
+Di kolom Key, ketik image. Di sebelah kanan Key (tersembunyi), ada dropdown teks/file, ubah dari Text menjadi File.
+Di kolom Value, klik tombol Select Files dan pilih gambar berukuran di bawah 2MB.
+Masukkan Token JWT di tab Authorization.
+Klik Send.

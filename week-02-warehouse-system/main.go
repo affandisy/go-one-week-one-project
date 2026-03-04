@@ -61,6 +61,8 @@ func main() {
 	})
 	app.Use(middlewares.ActivityLogger())
 
+	app.Static("/uploads", "./uploads")
+
 	// app.Get("/", func(c *fiber.Ctx) error {
 	// 	return c.JSON(fiber.Map{
 	// 		"message": "Selamat datang di Warehouse Management System",

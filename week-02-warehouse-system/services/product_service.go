@@ -29,6 +29,7 @@ type ProductService interface {
 	CreateProduct(req CreateProductRequest) (*models.Product, error)
 	GetAllProducts() ([]models.Product, error)
 	GetAllProductsPaginated(page int, limit int) (PaginatedResponse, error)
+	UpdateProductImage(productID uint, imagePath string) error
 }
 
 type productService struct {
@@ -100,4 +101,15 @@ func (s *productService) CreateProduct(req CreateProductRequest) (*models.Produc
 
 func (s *productService) GetAllProducts() ([]models.Product, error) {
 	return s.repo.FindAll()
+}
+
+func (s *productService) UpdateProductImage(productID uint, imagePath string) error {
+	product, err := s.repo.FindByID(productID)
+	if err != nil {
+		return errors.New("Produk tidak ditemukan")
+	}
+
+	product.ImageURL = &imagePath
+
+	return s.repo.Update(product)
 }

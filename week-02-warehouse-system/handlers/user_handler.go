@@ -1,6 +1,11 @@
 package handlers
 
 import (
+	"fmt"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -53,5 +58,55 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "Login berhasil",
 		"token":   token,
+	})
+}
+
+func (h *UserHandler) UploadAvatarImage(c *fiber.Ctx) error {
+	userId, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "ID User tidak valid",
+		})
+	}
+
+	file, err := c.FormFile("image")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "File gambar tidak ditemukan",
+		})
+	}
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Format file harus PNG atau JPG",
+		})
+	}
+
+	if file.Size > 2*1024*1024 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Ukuran gambar maksimal 2MB",
+		})
+	}
+
+	filename := fmt.Sprintf("user_avatar_%d_%d%s", userId, time.Now().Unix(), ext)
+	savePath := fmt.Sprintf("./uploads/users/%s", filename)
+
+	if err := c.SaveFile(file, savePath); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal menyimpan gambar",
+		})
+	}
+
+	dbPath := fmt.Sprintf("/uploads/users/%s", filename)
+	if err := h.service.UpdateUserAvatar(uint(userId), dbPath); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":   "Gambar produk berhasil diunggah",
+		"image_url": dbPath,
 	})
 }

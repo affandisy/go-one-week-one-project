@@ -12,6 +12,7 @@ type User struct {
 	Name      string         `gorm:"type:varchar(100);not null" json:"name"`
 	Email     string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"email"`
 	Password  string         `gorm:"type:varchar(255);not null" json:"-"` // JSON "-" agar password tidak pernah bocor ke response
+	AvatarURL *string        `gorm:"type:varchar(255)" json:"avatar_url"`
 	Phone     string         `gorm:"type:varchar(20)" json:"phone"`
 	Role      string         `gorm:"type:varchar(20);not null;default:'operator'" json:"role"` // admin, manager, operator
 	CreatedAt time.Time      `json:"created_at"`
@@ -24,6 +25,7 @@ type Product struct {
 	ID           uint           `gorm:"primaryKey" json:"id"`
 	SKU          string         `gorm:"type:varchar(50);uniqueIndex;not null" json:"sku"`
 	Name         string         `gorm:"type:varchar(150);not null" json:"name"`
+	ImageURL     *string        `gorm:"type:varchar(255)" json:"image_url"`
 	Description  string         `gorm:"type:text" json:"description"`
 	Category     string         `gorm:"type:varchar(50)" json:"category"`
 	Unit         string         `gorm:"type:varchar(20);not null" json:"unit"` // pcs, box, kg

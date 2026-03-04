@@ -18,10 +18,14 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 	dashboard := protected.Group("/dashboard")
 	dashboard.Get("/", dashboardHandler.GetSummary)
 
+	users := protected.Group("users")
+	users.Post("/:id/avatar", userHandler.UploadAvatarImage)
+
 	products := protected.Group("/products")
 	products.Post("/", productHandler.CreateProduct)
 	products.Get("/", productHandler.GetAllProducts)
 	products.Get("/page", productHandler.GetProductsPaginated)
+	products.Post("/:id/image", middlewares.RequireRoles("admin", "manager"), productHandler.UploadImage)
 
 	transactions := protected.Group("/transactions")
 	transactions.Post("/", txHandler.Create)

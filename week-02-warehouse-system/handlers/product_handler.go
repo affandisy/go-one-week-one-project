@@ -1,6 +1,11 @@
 package handlers
 
 import (
+	"fmt"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -74,5 +79,55 @@ func (h *ProductHandler) GetProductsPaginated(c *fiber.Ctx) error {
 		"success": true,
 		"message": "Berhasil memuat halaman produk",
 		"data":    result,
+	})
+}
+
+func (h *ProductHandler) UploadImage(c *fiber.Ctx) error {
+	productID, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "ID Produk tidak valid",
+		})
+	}
+
+	file, err := c.FormFile("image")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "File gambar tidak ditemukan",
+		})
+	}
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Format file harus PNG atau JPG",
+		})
+	}
+
+	if file.Size > 2*1024*1024 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Ukuran gambar maksimal 2MB",
+		})
+	}
+
+	filename := fmt.Sprintf("product_%d_%d%s", productID, time.Now().Unix(), ext)
+	savePath := fmt.Sprintf("./uploads/products/%s", filename)
+
+	if err := c.SaveFile(file, savePath); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal menyimpan gambar",
+		})
+	}
+
+	dbPath := fmt.Sprintf("/uploads/products/%s", filename)
+	if err := h.service.UpdateProductImage(uint(productID), dbPath); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":   "Gambar produk berhasil diunggah",
+		"image_url": dbPath,
 	})
 }

@@ -27,6 +27,7 @@ type LoginRequest struct {
 type UserService interface {
 	Register(req RegisterRequest) (*models.User, error)
 	Login(req LoginRequest) (string, error)
+	UpdateUserAvatar(userID uint, imagePath string) error
 }
 
 type userService struct {
@@ -90,4 +91,15 @@ func (s *userService) Login(req LoginRequest) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func (s *userService) UpdateUserAvatar(userID uint, imagePath string) error {
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return errors.New("User tidak ditemukan")
+	}
+
+	user.AvatarURL = &imagePath
+
+	return s.repo.Update(user)
 }
