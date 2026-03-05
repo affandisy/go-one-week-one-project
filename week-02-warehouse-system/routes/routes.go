@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/handlers"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/middlewares"
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -58,4 +59,6 @@ func SetupRoutes(app *fiber.App, productHandler *handlers.ProductHandler, userHa
 	warehouses.Post("/", middlewares.RequireRoles("admin"), warehouseHandler.Create)
 	warehouses.Get("/", warehouseHandler.GetAll)
 
+	app.Use("/ws", handlers.WebSocketUpgrade)
+	app.Get("/ws/notifications", websocket.New(handlers.WebSocketListen))
 }

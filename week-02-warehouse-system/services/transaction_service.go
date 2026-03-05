@@ -9,6 +9,7 @@ import (
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/config"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/models"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/repositories"
+	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/utils"
 )
 
 type CreateTransactionRequest struct {
@@ -113,6 +114,10 @@ func (s *transactionService) ProcessTransaction(req CreateTransactionRequest, us
 	if err != nil {
 		return nil, errors.New("Gagal menyimpan draft transaksi")
 	}
+
+	notifMsg := fmt.Sprintf("Transaksi %s baru (%s) menunggu persetujuan!", txData.Type, txData.ReferenceNo)
+
+	go utils.BroadcastNotification(notifMsg)
 
 	return txData, nil
 }

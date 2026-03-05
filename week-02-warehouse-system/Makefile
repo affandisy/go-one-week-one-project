@@ -238,3 +238,10 @@ POST http://localhost:3000/api/v1/transactions
     ]
 }
 6. POST http://localhost:3000/api/v1/transactions/2/approve
+
+## 23. Uji Coba WebSocket untuk Notifikasi Approve
+1. Buka Postman, klik tombol New -> pilih WebSocket Request.
+2. Masukkan URL: ws://localhost:3000/ws/notifications (Gunakan ws://, BUKAN http://).
+3. Klik Connect. Anda akan melihat status "Connected" berwarna hijau. Biarkan tab ini terbuka (Ini mensimulasikan layar Manager yang sedang aktif).
+4. Buka tab Postman biasa (HTTP). Buat transaksi Inbound baru ke POST http://localhost:3000/api/v1/transactions.
+5. Klik Send.
