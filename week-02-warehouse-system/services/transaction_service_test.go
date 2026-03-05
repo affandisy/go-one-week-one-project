@@ -1,12 +1,17 @@
 package services_test
 
 import (
+	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/config"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/mocks"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/models"
 	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/services"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -72,4 +77,64 @@ func TestProcessTransaction_InboundSuccess(t *testing.T) {
 	mockWhRepo.AssertExpectations(t)
 	mockPartnerRepo.AssertExpectations(t)
 	mockTxRepo.AssertExpectations(t)
+}
+
+func TestApproveTransaction_Success(t *testing.T) {
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
+
+	config.RedisClient = redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	config.Ctx = context.Background()
+
+	mockTxRepo := new(mocks.TransactionRepository)
+	mockProductRepo := new(mocks.ProductRepository)
+	mockWhStockRepo := new(mocks.WarehouseStockRepository)
+	mockBatchRepo := new(mocks.BatchRepository)
+
+	txService := services.NewTransactionService(mockTxRepo, mockProductRepo, nil, mockBatchRepo, nil, mockWhStockRepo)
+
+	txID := uint(1)
+	approverID := uint(99)
+	warehouseID := uint(1)
+	productID := uint(5)
+
+	dummyTx := &models.Transaction{
+		ID:          txID,
+		Status:      "draft",
+		Type:        "OUTBOUND",
+		WarehouseID: warehouseID,
+		Items: []models.TransactionItem{
+			{ProductID: productID, Quantity: 10},
+		},
+	}
+
+	dummyProduct := &models.Product{ID: productID, Name: "Kopi Sachet"}
+	dummyWhStock := &models.WarehouseStock{WarehouseID: warehouseID, ProductID: productID, Stock: 50}
+
+	dummyBatches := []models.ProductBatch{
+		{ID: 1, ProductID: productID, Stock: 15, ExpiryDate: time.Now().Add(30 * 24 * time.Hour)},
+	}
+
+	mockTxRepo.On("FindByID", txID).Return(dummyTx, nil)
+	mockProductRepo.On("FindByID", productID).Return(dummyProduct, nil)
+	mockWhStockRepo.On("GetStock", warehouseID, productID).Return(dummyWhStock, nil)
+	mockBatchRepo.On("FindByProductID", productID).Return(dummyBatches, nil)
+
+	mockTxRepo.On("ExecuteMultiWarehouseMutation", mock.Anything, mock.Anything).Return(nil)
+	mockBatchRepo.On("UpdateBatch", mock.Anything).Return(nil)
+
+	err = txService.ApproveTransaction(txID, approverID)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "approved", dummyTx.Status)
+	assert.Equal(t, approverID, *dummyTx.ApprovedByID)
+
+	lockExists := mr.Exists("lock:warehouse:1:product:5")
+	assert.False(t, lockExists, "Gembok Redis seharusnya sudah dilepas oleh defer!")
+
+	mockTxRepo.AssertExpectations(t)
+	mockBatchRepo.AssertExpectations(t)
 }
