@@ -245,3 +245,8 @@ POST http://localhost:3000/api/v1/transactions
 3. Klik Connect. Anda akan melihat status "Connected" berwarna hijau. Biarkan tab ini terbuka (Ini mensimulasikan layar Manager yang sedang aktif).
 4. Buka tab Postman biasa (HTTP). Buat transaksi Inbound baru ke POST http://localhost:3000/api/v1/transactions.
 5. Klik Send.
+
+## 24. Uji Coba Seeding Data Dummy
+1. Karena skrip ini akan memasukkan data dalam jumlah masif, sangat disarankan Anda mengosongkan database terlebih dahulu 
+(Anda bisa melakukan Drop Table di DBeaver/DataGrip, lalu jalankan ulang main.go agar tabelnya kosong dan bersih).
+2. Buka terminal, jalankan: go run seeder.go
