@@ -3,4 +3,5 @@ go 1.25.1
 use (
 	./week-01-sistem-layanan-telkom
 	./week-02-warehouse-system
+	./week-03-sekolah-system/backend
 )
