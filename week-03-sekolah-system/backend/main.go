@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/affandisy/school-system-sma/handlers"
 	"github.com/affandisy/school-system-sma/models"
 	"github.com/affandisy/school-system-sma/repository"
 	"github.com/affandisy/school-system-sma/service"
@@ -21,7 +22,13 @@ func main() {
 	}
 
 	// Auto Migrate
-	db.AutoMigrate(&models.User{})
+	db.AutoMigrate(
+		&models.User{},
+		&models.AcademicYear{},
+		&models.Class{},
+		&models.StudyProgram{},
+		&models.Subject{},
+	)
 
 	// Dependency Injection
 	userRepo := repository.NewUserRepository(db)
@@ -60,6 +67,16 @@ func main() {
 		}
 		return c.JSON(fiber.Map{"message": "Berhasil daftar!"})
 	})
+
+	// Inisialisasi Academic Module
+	academicRepo := repository.NewAcademicRepository(db)
+	academicService := service.NewAcademicService(academicRepo)
+	academicHandler := handlers.NewAcademicHandler(academicService)
+
+	// Routing (idealnya dilindungi JWT Middleware, tapi untuk tes kita buka dulu)
+	masterData := api.Group("/academic-years")
+	masterData.Post("/", academicHandler.CreateAcademicYear)
+	masterData.Get("/", academicHandler.GetAcademicYears)
 
 	log.Println("Server berjalan di port 3000")
 	app.Listen(":3000")
