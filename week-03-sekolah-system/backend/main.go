@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/affandisy/school-system-sma/handlers"
+	"github.com/affandisy/school-system-sma/middleware"
 	"github.com/affandisy/school-system-sma/models"
 	"github.com/affandisy/school-system-sma/repository"
 	"github.com/affandisy/school-system-sma/service"
@@ -38,45 +39,25 @@ func main() {
 	app.Use(cors.New()) // Penting agar Frontend Svelte bisa komunikasi
 
 	api := app.Group("/api/v1")
-	auth := api.Group("/auth")
 
-	// Endpoint Login
-	auth.Post("/login", func(c *fiber.Ctx) error {
-		var req struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Format tidak valid"})
-		}
-		token, err := authService.Login(req.Email, req.Password)
-		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": err.Error()})
-		}
-		return c.JSON(fiber.Map{"data": fiber.Map{"token": token}})
-	})
-
-	// Endpoint Register Dummy (Untuk testing awal)
-	auth.Post("/register", func(c *fiber.Ctx) error {
-		var req service.RegisterRequest
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Format tidak valid"})
-		}
-		if err := authService.Register(req); err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Gagal register"})
-		}
-		return c.JSON(fiber.Map{"message": "Berhasil daftar!"})
-	})
+	authHandler := handlers.NewAuthHandler(authService)
 
 	// Inisialisasi Academic Module
 	academicRepo := repository.NewAcademicRepository(db)
 	academicService := service.NewAcademicService(academicRepo)
 	academicHandler := handlers.NewAcademicHandler(academicService)
 
+	// Public Routes
+	auth := api.Group("/auth")
+	auth.Post("/login", authHandler.Login)
+
+	jwtMid := middleware.JWTProtected("SUPER_SECRET_KEY")
+
 	// Routing (idealnya dilindungi JWT Middleware, tapi untuk tes kita buka dulu)
-	masterData := api.Group("/academic-years")
-	masterData.Post("/", academicHandler.CreateAcademicYear)
-	masterData.Get("/", academicHandler.GetAcademicYears)
+	master := api.Group("/academic-years", jwtMid)
+	// Hanya Admin/TU yang boleh membuat Tahun Ajaran
+	master.Post("/", middleware.RequireRoles("ADMIN", "TU"), academicHandler.CreateAcademicYear)
+	master.Get("/", academicHandler.GetAcademicYears)
 
 	log.Println("Server berjalan di port 3000")
 	app.Listen(":3000")
