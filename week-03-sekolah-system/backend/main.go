@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/affandisy/go-one-week-one-project/week-02-warehouse-system/middlewares"
 	"github.com/affandisy/school-system-sma/config"
 	"github.com/affandisy/school-system-sma/handlers"
 	"github.com/affandisy/school-system-sma/middleware"
@@ -30,6 +31,10 @@ func main() {
 	payrollService := service.NewPayrollService(payrollRepo)
 	payrollHandler := handlers.NewPayrollHandler(payrollService)
 
+	recomRepo := repository.NewRecommendationRepository(db)
+	recomService := service.NewRecommendationService(recomRepo)
+	recomHandler := handlers.NewRecommendationHandler(recomService)
+
 	// ... (Tambahkan DI untuk Grade jika sudah siap) ...
 
 	// 3. Setup Fiber & Middleware
@@ -56,6 +61,10 @@ func main() {
 	// Payroll / Penggajian
 	payroll := protected.Group("/salary-payslips")
 	payroll.Post("/calculate", middleware.RequireRoles("KEUANGAN", "ADMIN"), payrollHandler.CalculatePayslip)
+
+	recom := protected.Group("/student-recommendations")
+	// Hanya Guru BK dan Kepala Sekolah yang bisa mengaktifkan mesin kalkulasi ini
+	recom.Post("/calculate", middlewares.RequireRoles("BK", "KEPSEK", "ADMIN"), recomHandler.CalculateRanking)
 
 	log.Println("🚀 Server School System berjalan di port 3000")
 	app.Listen(":3000")
