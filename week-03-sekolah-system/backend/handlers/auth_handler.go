@@ -10,7 +10,7 @@ type AuthHandler struct {
 }
 
 func NewAuthHandler(service service.AuthService) *AuthHandler {
-	return &AuthHandler{service}
+	return &AuthHandler{service: service}
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {

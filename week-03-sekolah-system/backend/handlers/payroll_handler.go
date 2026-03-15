@@ -10,7 +10,7 @@ type PayrollHandler struct {
 }
 
 func NewPayrollHandler(service service.PayrollService) *PayrollHandler {
-	return &PayrollHandler{service}
+	return &PayrollHandler{service: service}
 }
 
 func (h *PayrollHandler) CalculatePayslip(c *fiber.Ctx) error {

@@ -10,7 +10,7 @@ type AcademicHandler struct {
 }
 
 func NewAcademicHandler(service service.AcademicService) *AcademicHandler {
-	return &AcademicHandler{service}
+	return &AcademicHandler{service: service}
 }
 
 func (h *AcademicHandler) CreateAcademicYear(c *fiber.Ctx) error {

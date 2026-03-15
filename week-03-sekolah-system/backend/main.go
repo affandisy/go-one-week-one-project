@@ -35,7 +35,11 @@ func main() {
 	recomService := service.NewRecommendationService(recomRepo)
 	recomHandler := handlers.NewRecommendationHandler(recomService)
 
-	// ... (Tambahkan DI untuk Grade jika sudah siap) ...
+	annRepo := repository.NewAnnouncementRepository(db)
+	annService := service.NewAnnouncementService(annRepo)
+	annHandler := handlers.NewAnnouncementHandler(annService)
+
+	// ... (di bagian rute)
 
 	// 3. Setup Fiber & Middleware
 	app := fiber.New()
@@ -65,6 +69,14 @@ func main() {
 	recom := protected.Group("/student-recommendations")
 	// Hanya Guru BK dan Kepala Sekolah yang bisa mengaktifkan mesin kalkulasi ini
 	recom.Post("/calculate", middlewares.RequireRoles("BK", "KEPSEK", "ADMIN"), recomHandler.CalculateRanking)
+
+	// Pengumuman
+	announcements := protected.Group("/announcements")
+	announcements.Post("/", middlewares.RequireRoles("ADMIN", "TU", "KEPSEK"), annHandler.CreateAnnouncement)
+
+	// Laporan (Reports)
+	reports := protected.Group("/reports")
+	reports.Post("/academic", middlewares.RequireRoles("ADMIN", "KEPSEK"), annHandler.RequestAcademicReport)
 
 	log.Println("🚀 Server School System berjalan di port 3000")
 	app.Listen(":3000")

@@ -10,7 +10,7 @@ type RecommendationHandler struct {
 }
 
 func NewRecommendationHandler(service service.RecommendationService) *RecommendationHandler {
-	return &RecommendationHandler{service}
+	return &RecommendationHandler{service: service}
 }
 
 // Struct untuk menangkap body JSON dari Frontend
