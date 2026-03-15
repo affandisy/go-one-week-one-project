@@ -73,6 +73,7 @@ func main() {
 	// Pengumuman
 	announcements := protected.Group("/announcements")
 	announcements.Post("/", middlewares.RequireRoles("ADMIN", "TU", "KEPSEK"), annHandler.CreateAnnouncement)
+	announcements.Get("/", annHandler.GetAnnouncements)
 
 	// Laporan (Reports)
 	reports := protected.Group("/reports")

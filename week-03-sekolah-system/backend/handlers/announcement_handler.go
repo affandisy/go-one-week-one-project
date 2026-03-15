@@ -48,3 +48,11 @@ func (h *AnnouncementHandler) RequestAcademicReport(c *fiber.Ctx) error {
 		"message": "Permintaan laporan sedang diproses di latar belakang. Anda akan diberitahu saat laporan siap.",
 	})
 }
+
+func (h *AnnouncementHandler) GetAnnouncements(c *fiber.Ctx) error {
+	anns, err := h.service.GetAnnouncements()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal mengambil pengumuman"})
+	}
+	return c.JSON(fiber.Map{"data": anns})
+}
