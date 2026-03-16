@@ -39,7 +39,10 @@ func main() {
 	annService := service.NewAnnouncementService(annRepo)
 	annHandler := handlers.NewAnnouncementHandler(annService)
 
-	// ... (di bagian rute)
+	// Inisialisasi Modul Absensi
+	attRepo := repository.NewAttendanceRepository(db)
+	attService := service.NewAttendanceService(attRepo)
+	attHandler := handlers.NewAttendanceHandler(attService)
 
 	// 3. Setup Fiber & Middleware
 	app := fiber.New()
@@ -79,6 +82,11 @@ func main() {
 	reports := protected.Group("/reports")
 	reports.Post("/academic", middlewares.RequireRoles("ADMIN", "KEPSEK"), annHandler.RequestAcademicReport)
 
-	log.Println("🚀 Server School System berjalan di port 3000")
+	attendance := protected.Group("/attendance")
+	// Sesuai PRD, Guru yang mencatat absensi murid
+	attendance.Post("/student/batch", middlewares.RequireRoles("GURU", "ADMIN"), attHandler.RecordBatchAttendance)
+	attendance.Get("/class/:classId/students", middlewares.RequireRoles("GURU", "ADMIN"), attHandler.GetClassStudents)
+
+	log.Println("Server School System berjalan di port 3000")
 	app.Listen(":3000")
 }
