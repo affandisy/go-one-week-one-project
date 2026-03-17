@@ -34,6 +34,10 @@
     </div>
 </div>
 
+<a href="/dashboard/classes" class="text-blue-600 hover:underline">Master Kelas</a>
+<a href="/dashboard/subjects" class="text-blue-600 hover:underline">Master Mapel</a>
+<a href="/dashboard/students" class="text-blue-600 hover:underline">Master Siswa</a>
+
         <div class="grid grid-cols-3 gap-4 mt-8">
             <div class="bg-white p-6 rounded shadow border-t-4 border-blue-500">
                 <h3 class="font-bold text-gray-700">Total Siswa</h3>
