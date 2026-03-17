@@ -48,6 +48,10 @@ func main() {
 	masterService := service.NewMasterService(masterRepo)
 	masterHandler := handlers.NewMasterHandler(masterService)
 
+	reportRepo := repository.NewReportRepository(db)
+	reportService := service.NewReportService(reportRepo)
+	reportHandler := handlers.NewReportHandler(reportService)
+
 	// 3. Setup Fiber & Middleware
 	app := fiber.New()
 	app.Use(cors.New())
@@ -105,6 +109,10 @@ func main() {
 	students := protected.Group("/students")
 	students.Get("/", middlewares.RequireRoles("ADMIN", "TU", "GURU", "KEPSEK"), masterHandler.GetStudents)
 	students.Post("/", middlewares.RequireRoles("ADMIN", "TU"), masterHandler.CreateStudent)
+
+	reportsCard := protected.Group("/report-cards")
+	reportsCard.Get("/", reportHandler.GetReports)
+	reportsCard.Post("/generate", middlewares.RequireRoles("KEPSEK", "ADMIN", "GURU"), reportHandler.GenerateReport)
 
 	log.Println("Server School System berjalan di port 3000")
 	app.Listen(":3000")
