@@ -44,6 +44,10 @@ func main() {
 	attService := service.NewAttendanceService(attRepo)
 	attHandler := handlers.NewAttendanceHandler(attService)
 
+	masterRepo := repository.NewMasterRepository(db)
+	masterService := service.NewMasterService(masterRepo)
+	masterHandler := handlers.NewMasterHandler(masterService)
+
 	// 3. Setup Fiber & Middleware
 	app := fiber.New()
 	app.Use(cors.New())
@@ -86,6 +90,21 @@ func main() {
 	// Sesuai PRD, Guru yang mencatat absensi murid
 	attendance.Post("/student/batch", middlewares.RequireRoles("GURU", "ADMIN"), attHandler.RecordBatchAttendance)
 	attendance.Get("/class/:classId/students", middlewares.RequireRoles("GURU", "ADMIN"), attHandler.GetClassStudents)
+
+	// CLASSES
+	classes := protected.Group("/classes")
+	classes.Get("/", masterHandler.GetClasses) // Semua bisa melihat daftar kelas
+	classes.Post("/", middlewares.RequireRoles("ADMIN", "TU"), masterHandler.CreateClass)
+
+	// SUBJECTS
+	subjects := protected.Group("/subjects")
+	subjects.Get("/", masterHandler.GetSubjects) // Semua bisa melihat daftar mapel
+	subjects.Post("/", middlewares.RequireRoles("ADMIN", "TU"), masterHandler.CreateSubject)
+
+	// STUDENTS
+	students := protected.Group("/students")
+	students.Get("/", middlewares.RequireRoles("ADMIN", "TU", "GURU", "KEPSEK"), masterHandler.GetStudents)
+	students.Post("/", middlewares.RequireRoles("ADMIN", "TU"), masterHandler.CreateStudent)
 
 	log.Println("Server School System berjalan di port 3000")
 	app.Listen(":3000")
