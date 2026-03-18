@@ -82,6 +82,14 @@
             isLoading = false;
         }
     }
+
+    function markAllAs(status: string) {
+        // Update state reaktif Svelte
+        students = students.map(student => ({
+            ...student,
+            status: status
+        }));
+    }
 </script>
 
 <div class="p-8 max-w-6xl mx-auto">
@@ -118,6 +126,12 @@
 
     {#if students.length > 0}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-4 bg-gray-50 flex gap-3 border-b border-gray-100 justify-end items-center">
+        <span class="text-sm font-semibold text-gray-500 mr-2">Tandai Semua:</span>
+        <button on:click={() => markAllAs('hadir')} class="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-md hover:bg-green-200 font-bold transition">Hadir</button>
+        <button on:click={() => markAllAs('izin')} class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-md hover:bg-blue-200 font-bold transition">Izin</button>
+        <button on:click={() => markAllAs('alfa')} class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-md hover:bg-red-200 font-bold transition">Alfa</button>
+    </div>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>

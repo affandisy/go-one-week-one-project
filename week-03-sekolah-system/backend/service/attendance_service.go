@@ -35,27 +35,26 @@ type BatchAttendanceRequest struct {
 }
 
 func (s *attendanceService) RecordStudentBatchAttendance(req BatchAttendanceRequest, recordedByID string) error {
-	// 1. Validasi Tanggal
 	attendanceDate, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
-		return errors.New("Format tanggal tidak valid (gunakan YYYY-MM-DD)")
+		return errors.New("Format tanggal tidak valid")
 	}
-
 	if attendanceDate.After(time.Now()) {
-		return errors.New("Tidak bisa melakukan absensi untuk tanggal di masa depan")
+		return errors.New("Tidak bisa mengabsen untuk masa depan")
 	}
 
 	recorderUUID, _ := uuid.Parse(recordedByID)
 
-	// 2. Iterasi dan Validasi Data per Siswa (Golang Cerdas)
+	// Siapkan penampung (Slice)
+	var attendances []models.Attendance
+
 	for _, record := range req.Records {
 		if record.Status != "hadir" && record.Status != "izin" && record.Status != "sakit" && record.Status != "alfa" {
-			return errors.New("Status absensi tidak valid untuk siswa ID: " + record.StudentID)
+			return errors.New("Status absensi tidak valid")
 		}
 
 		userUUID, _ := uuid.Parse(record.UserID)
-
-		attendance := &models.Attendance{
+		att := models.Attendance{
 			UserID:         userUUID,
 			AttendanceDate: attendanceDate,
 			Status:         record.Status,
@@ -63,16 +62,18 @@ func (s *attendanceService) RecordStudentBatchAttendance(req BatchAttendanceRequ
 			RecordedByID:   &recorderUUID,
 		}
 
-		// Jika hadir, catat waktu check-in (opsional)
 		if record.Status == "hadir" {
 			now := time.Now()
-			attendance.CheckInTime = &now
+			att.CheckInTime = &now
 		}
 
-		// Simpan ke DB (Lewat Repo)
-		if err := s.repo.UpsertAttendance(attendance); err != nil {
-			return errors.New("Gagal menyimpan absensi untuk sebagian siswa")
-		}
+		// Masukkan ke penampung, BUKAN langsung di-save
+		attendances = append(attendances, att)
+	}
+
+	// Eksekusi 1 kueri massal yang sangat cepat
+	if err := s.repo.UpsertBatch(attendances); err != nil {
+		return errors.New("Gagal menyimpan absensi massal")
 	}
 
 	return nil

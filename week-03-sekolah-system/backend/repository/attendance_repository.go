@@ -3,11 +3,13 @@ package repository
 import (
 	"github.com/affandisy/school-system-sma/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type AttendanceRepository interface {
 	UpsertAttendance(attendance *models.Attendance) error
 	GetStudentsByClass(classID string) ([]models.Student, error)
+	UpsertBatch(attendances []models.Attendance) error
 }
 
 type attendanceRepository struct {
@@ -40,4 +42,15 @@ func (r *attendanceRepository) GetStudentsByClass(classID string) ([]models.Stud
 	// Preload User untuk mendapatkan nama siswa
 	err := r.db.Preload("User").Where("class_id = ?", classID).Find(&students).Error
 	return students, err
+}
+
+func (r *attendanceRepository) UpsertBatch(attendances []models.Attendance) error {
+	if len(attendances) == 0 {
+		return nil
+	}
+
+	return r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "attendance_date"}},
+		DoUpdates: clause.AssignmentColumns([]string{"status", "notes", "check_in_time", "recorded_by_id"}),
+	}).Create(&attendances).Error
 }
