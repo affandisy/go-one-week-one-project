@@ -12,9 +12,11 @@ type User struct {
 	Email        string    `gorm:"unique;not null" json:"email"`
 	Whatsapp     string    `gorm:"unique;not null" json:"whatsapp"` // Untuk notifikasi
 	FullName     string    `gorm:"not null" json:"full_name"`
-	PasswordHash string    `gorm:"not null" json:"-"`                // Disembunyikan dari JSON
-	Role         string    `gorm:"default:'customer'" json:"role"`   // customer, admin, owner
-	IsVerified   bool      `gorm:"default:false" json:"is_verified"` // Setelah verifikasi OTP[cite: 2]
+	PasswordHash string    `gorm:"not null" json:"-"`              // Disembunyikan dari JSON
+	Role         string    `gorm:"default:'customer'" json:"role"` // customer, admin, owner
+	IsVerified   bool      `gorm:"default:false" json:"is_verified"`
+	OTP          string    `json:"-"`
+	OTPExpiry    time.Time `json:"-"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
