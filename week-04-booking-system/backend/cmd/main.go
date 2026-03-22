@@ -39,6 +39,10 @@ func main() {
 	courtService := services.NewCourtService(courtRepo)
 	courtHandler := handlers.NewCourtHandler(courtService)
 
+	pricingRepo := repositories.NewPricingRepository(db)
+	pricingService := services.NewPricingService(pricingRepo)
+	pricingHandler := handlers.NewPricingHandler(pricingService)
+
 	// ================= PROTECTED ROUTES =================
 	protected := api.Group("/", middlewares.JWTProtected(jwtSecret))
 
@@ -66,6 +70,12 @@ func main() {
 	adminCourts.Post("/", courtHandler.Create)
 	adminCourts.Put("/:id", courtHandler.Update)
 	adminCourts.Delete("/:id", courtHandler.Delete)
+
+	adminPricing := adminRoutes.Group("/pricing-rules")
+	adminPricing.Get("/", pricingHandler.GetByCourt)
+	adminPricing.Post("/", pricingHandler.Create)
+	adminPricing.Put("/:id", pricingHandler.Update)
+	adminPricing.Delete("/:id", pricingHandler.Delete)
 
 	log.Println("Server Padel Booking berjalan di port 3000")
 	log.Fatal(app.Listen(":3000"))
