@@ -34,8 +34,17 @@ func main() {
 	auth.Post("/verify-otp", authHandler.VerifyOTP)
 	auth.Post("/login", authHandler.Login)
 
+	// 1. Inisialisasi Modul Court (Lapangan)
+	courtRepo := repositories.NewCourtRepository(db)
+	courtService := services.NewCourtService(courtRepo)
+	courtHandler := handlers.NewCourtHandler(courtService)
+
 	// ================= PROTECTED ROUTES =================
 	protected := api.Group("/", middlewares.JWTProtected(jwtSecret))
+
+	courts := protected.Group("/courts")
+	courts.Get("/", courtHandler.GetAll)
+	courts.Get("/:id", courtHandler.GetByID)
 
 	protected.Get("/me", func(c *fiber.Ctx) error {
 		userID := c.Locals("user_id").(string)
@@ -52,6 +61,11 @@ func main() {
 	adminRoutes.Get("/test", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "Selamat datang di ruang rahasia Admin!"})
 	})
+
+	adminCourts := adminRoutes.Group("/courts")
+	adminCourts.Post("/", courtHandler.Create)
+	adminCourts.Put("/:id", courtHandler.Update)
+	adminCourts.Delete("/:id", courtHandler.Delete)
 
 	log.Println("Server Padel Booking berjalan di port 3000")
 	log.Fatal(app.Listen(":3000"))
