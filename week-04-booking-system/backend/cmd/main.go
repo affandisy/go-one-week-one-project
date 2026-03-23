@@ -47,6 +47,9 @@ func main() {
 	bookingService := services.NewBookingService(bookingRepo)
 	bookingHandler := handlers.NewBookingHandler(bookingService)
 
+	bookingService.RunAutoExpireJob()
+	log.Println("⚙️ Background Job Auto-Expire Booking telah diaktifkan")
+
 	// ================= PROTECTED ROUTES =================
 	protected := api.Group("/", middlewares.JWTProtected(jwtSecret))
 
@@ -83,8 +86,14 @@ func main() {
 	adminPricing.Put("/:id", pricingHandler.Update)
 	adminPricing.Delete("/:id", pricingHandler.Delete)
 
+	adminBookings := adminRoutes.Group("/bookings")
+	adminBookings.Get("/", bookingHandler.GetAllBookings) // Lihat semua booking
+	adminBookings.Put("/:id/cancel", bookingHandler.CancelBooking)
+
 	customerBookings := protected.Group("/bookings")
-	customerBookings.Post("/", bookingHandler.CreateBooking)
+	customerBookings.Post("/", bookingHandler.CreateBooking)          // Buat Booking
+	customerBookings.Get("/me", bookingHandler.GetMyBookings)         // Riwayat Pribadi
+	customerBookings.Put("/:id/cancel", bookingHandler.CancelBooking) // Batal Booking
 
 	log.Println("Server Padel Booking berjalan di port 3000")
 	log.Fatal(app.Listen(":3000"))

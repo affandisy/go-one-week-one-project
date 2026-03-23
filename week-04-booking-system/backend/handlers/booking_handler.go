@@ -63,3 +63,38 @@ func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 		},
 	})
 }
+
+// GET /bookings/me
+func (h *BookingHandler) GetMyBookings(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+
+	bookings, err := h.service.GetUserBookings(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "gagal mengambil riwayat booking"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"data": bookings})
+}
+
+// GET /admin/bookings
+func (h *BookingHandler) GetAllBookings(c *fiber.Ctx) error {
+	bookings, err := h.service.GetAllBookings()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "gagal mengambil data booking"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"data": bookings})
+}
+
+// PUT /bookings/:id/cancel
+func (h *BookingHandler) CancelBooking(c *fiber.Ctx) error {
+	bookingID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("role").(string)
+
+	if err := h.service.CancelBooking(bookingID, userID, role); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Booking berhasil dibatalkan"})
+}

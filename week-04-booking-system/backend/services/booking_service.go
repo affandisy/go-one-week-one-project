@@ -13,6 +13,10 @@ import (
 type BookingService interface {
 	GetAvailability(courtID, dateStr string) ([]map[string]interface{}, error)
 	CreateBooking(userID, courtID, dateStr, start, end string) (*models.Booking, error)
+	GetUserBookings(userID string) ([]models.Booking, error)
+	GetAllBookings() ([]models.Booking, error)
+	CancelBooking(bookingID string, userID string, role string) error
+	RunAutoExpireJob()
 }
 
 type bookingService struct {
@@ -128,4 +132,52 @@ func (s *bookingService) CreateBooking(userID, courtID, dateStr, start, end stri
 	tx.Commit()
 
 	return booking, nil
+}
+
+func (s *bookingService) GetUserBookings(userID string) ([]models.Booking, error) {
+	return s.repo.GetBookingsByUser(userID)
+}
+
+func (s *bookingService) GetAllBookings() ([]models.Booking, error) {
+	return s.repo.GetAllBookings()
+}
+
+func (s *bookingService) CancelBooking(bookingID string, userID string, role string) error {
+	booking, err := s.repo.FindByID(bookingID)
+	if err != nil {
+		return errors.New("booking tidak ditemukan")
+	}
+
+	// Validasi Otorisasi: Hanya Admin/Owner ATAU pemilik booking yang boleh membatalkan
+	if role == "customer" && booking.UserID.String() != userID {
+		return errors.New("anda tidak memiliki izin membatalkan booking ini")
+	}
+
+	// Hanya booking yang belum dibayar atau masih pending yang bisa dibatalkan dengan mudah
+	if booking.Status == "paid" {
+		return errors.New("booking yang sudah dibayar harus melalui proses refund ke Admin")
+	}
+
+	return s.repo.UpdateStatus(bookingID, "cancelled")
+}
+
+func (s *bookingService) RunAutoExpireJob() {
+	ticker := time.NewTicker(1 * time.Minute) // Berjalan setiap 1 Menit
+	go func() {
+		for {
+			<-ticker.C // Tunggu detak ticker
+
+			// 1. Cari booking yang waktunya habis
+			expiredBookings, err := s.repo.GetExpiredLockedBookings()
+			if err != nil || len(expiredBookings) == 0 {
+				continue // Aman, tidak ada yang expired
+			}
+
+			// 2. Ubah statusnya menjadi expired agar slotnya kembali tersedia
+			for _, b := range expiredBookings {
+				_ = s.repo.UpdateStatus(b.ID.String(), "expired")
+				fmt.Printf("[AUTO-EXPIRE JOB] Booking %s kedaluwarsa dan slot dirilis.\n", b.BookingCode)
+			}
+		}
+	}()
 }

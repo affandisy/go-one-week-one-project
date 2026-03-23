@@ -11,6 +11,11 @@ type BookingRepository interface {
 	CreateBooking(tx *gorm.DB, booking *models.Booking) error
 	GetBookingsByDate(courtID string, date string) ([]models.Booking, error)
 	GetPricingRules(courtID string, dayType string) ([]models.PricingRule, error)
+	GetBookingsByUser(userID string) ([]models.Booking, error)
+	GetAllBookings() ([]models.Booking, error)
+	FindByID(id string) (*models.Booking, error)
+	UpdateStatus(id string, status string) error
+	GetExpiredLockedBookings() ([]models.Booking, error)
 }
 
 type bookingRepository struct {
@@ -48,4 +53,34 @@ func (r *bookingRepository) GetPricingRules(courtID string, dayType string) ([]m
 	var rules []models.PricingRule
 	err := r.db.Where("court_id = ? AND day_type = ?", courtID, dayType).Find(&rules).Error
 	return rules, err
+}
+
+func (r *bookingRepository) GetBookingsByUser(userID string) ([]models.Booking, error) {
+	var bookings []models.Booking
+	// Preload Court untuk menampilkan nama lapangan di UI
+	err := r.db.Preload("Court").Where("user_id = ?", userID).Order("booking_date desc, start_time desc").Find(&bookings).Error
+	return bookings, err
+}
+
+func (r *bookingRepository) GetAllBookings() ([]models.Booking, error) {
+	var bookings []models.Booking
+	err := r.db.Preload("User").Preload("Court").Order("booking_date desc, start_time desc").Find(&bookings).Error
+	return bookings, err
+}
+
+func (r *bookingRepository) FindByID(id string) (*models.Booking, error) {
+	var booking models.Booking
+	err := r.db.Where("id = ?", id).First(&booking).Error
+	return &booking, err
+}
+
+func (r *bookingRepository) UpdateStatus(id string, status string) error {
+	return r.db.Model(&models.Booking{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// Kueri khusus untuk Background Job: Cari yang "locked" dan waktunya sudah habis
+func (r *bookingRepository) GetExpiredLockedBookings() ([]models.Booking, error) {
+	var bookings []models.Booking
+	err := r.db.Where("status = ? AND lock_expiry < NOW()", "locked").Find(&bookings).Error
+	return bookings, err
 }
