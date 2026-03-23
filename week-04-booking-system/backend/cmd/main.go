@@ -43,12 +43,18 @@ func main() {
 	pricingService := services.NewPricingService(pricingRepo)
 	pricingHandler := handlers.NewPricingHandler(pricingService)
 
+	bookingRepo := repositories.NewBookingRepository(db)
+	bookingService := services.NewBookingService(bookingRepo)
+	bookingHandler := handlers.NewBookingHandler(bookingService)
+
 	// ================= PROTECTED ROUTES =================
 	protected := api.Group("/", middlewares.JWTProtected(jwtSecret))
 
 	courts := protected.Group("/courts")
 	courts.Get("/", courtHandler.GetAll)
 	courts.Get("/:id", courtHandler.GetByID)
+
+	api.Get("/availability", bookingHandler.GetAvailability)
 
 	protected.Get("/me", func(c *fiber.Ctx) error {
 		userID := c.Locals("user_id").(string)
@@ -76,6 +82,9 @@ func main() {
 	adminPricing.Post("/", pricingHandler.Create)
 	adminPricing.Put("/:id", pricingHandler.Update)
 	adminPricing.Delete("/:id", pricingHandler.Delete)
+
+	customerBookings := protected.Group("/bookings")
+	customerBookings.Post("/", bookingHandler.CreateBooking)
 
 	log.Println("Server Padel Booking berjalan di port 3000")
 	log.Fatal(app.Listen(":3000"))
