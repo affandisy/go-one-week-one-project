@@ -70,7 +70,8 @@ func (r *bookingRepository) GetAllBookings() ([]models.Booking, error) {
 
 func (r *bookingRepository) FindByID(id string) (*models.Booking, error) {
 	var booking models.Booking
-	err := r.db.Where("id = ?", id).First(&booking).Error
+	// Preload User dan Court agar datanya lengkap saat dicetak ke PDF
+	err := r.db.Preload("User").Preload("Court").Where("id = ?", id).First(&booking).Error
 	return &booking, err
 }
 

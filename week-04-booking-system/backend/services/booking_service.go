@@ -3,11 +3,13 @@ package services
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/affandisy/padel-booking-system/models"
 	"github.com/affandisy/padel-booking-system/repositories"
 	"github.com/google/uuid"
+	"github.com/jung-kurt/gofpdf"
 )
 
 type BookingService interface {
@@ -16,6 +18,8 @@ type BookingService interface {
 	GetUserBookings(userID string) ([]models.Booking, error)
 	GetAllBookings() ([]models.Booking, error)
 	CancelBooking(bookingID string, userID string, role string) error
+	ProcessPayment(bookingID string, userID string) error
+	GenerateReceiptPDF(bookingID string, userID string) (string, error)
 	RunAutoExpireJob()
 }
 
@@ -180,4 +184,105 @@ func (s *bookingService) RunAutoExpireJob() {
 			}
 		}
 	}()
+}
+
+func (s *bookingService) ProcessPayment(bookingID string, userID string) error {
+	booking, err := s.repo.FindByID(bookingID)
+	if err != nil {
+		return errors.New("booking tidak ditemukan")
+	}
+
+	// 1. Validasi Kepemilikan
+	if booking.UserID.String() != userID {
+		return errors.New("anda tidak memiliki akses untuk membayar booking ini")
+	}
+
+	// 2. Validasi Status & Waktu Kedaluwarsa
+	if booking.Status == "paid" {
+		return errors.New("booking ini sudah dibayar")
+	}
+	if booking.Status != "locked" {
+		return errors.New("status booking tidak valid untuk pembayaran")
+	}
+	if time.Now().After(*booking.LockExpiry) {
+		// Ubah status ke expired di database
+		_ = s.repo.UpdateStatus(bookingID, "expired")
+		return errors.New("waktu pembayaran telah habis (expired)")
+	}
+
+	// 3. Eksekusi Pembayaran (Simulasi sukses)
+	// Di dunia nyata, di sinilah Anda memanggil API Midtrans/Xendit
+	return s.repo.UpdateStatus(bookingID, "paid")
+}
+
+// Fitur 4: Cetak Bukti Booking (PDF)
+func (s *bookingService) GenerateReceiptPDF(bookingID string, userID string) (string, error) {
+	booking, err := s.repo.FindByID(bookingID)
+	if err != nil || booking.UserID.String() != userID {
+		return "", errors.New("data booking tidak ditemukan atau tidak valid")
+	}
+
+	if booking.Status != "paid" {
+		return "", errors.New("bukti booking hanya bisa dicetak setelah pembayaran lunas")
+	}
+
+	// 1. Siapkan direktori penyimpanan
+	storageDir := "./public/receipts"
+	os.MkdirAll(storageDir, os.ModePerm)
+
+	// 2. Menggambar Invoice PDF
+	pdf := gofpdf.New("P", "mm", "A5", "") // Menggunakan ukuran A5 agar pas di layar HP
+	pdf.AddPage()
+
+	// Header Logo / Judul
+	pdf.SetFont("Arial", "B", 18)
+	pdf.CellFormat(130, 10, "PADEL BOOKING E-RECEIPT", "0", 1, "C", false, 0, "")
+	pdf.SetFont("Arial", "", 10)
+	pdf.CellFormat(130, 6, "Bukti Pemesanan Lapangan Sah", "0", 1, "C", false, 0, "")
+	pdf.Ln(8)
+
+	// Info Booking
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(40, 8, "Kode Booking", "0", 0, "L", false, 0, "")
+	pdf.SetFont("Arial", "", 12)
+	pdf.CellFormat(90, 8, ": "+booking.BookingCode, "0", 1, "L", false, 0, "")
+
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(40, 8, "Nama Pemesan", "0", 0, "L", false, 0, "")
+	pdf.SetFont("Arial", "", 12)
+	pdf.CellFormat(90, 8, ": "+booking.User.FullName, "0", 1, "L", false, 0, "")
+
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(40, 8, "Lapangan", "0", 0, "L", false, 0, "")
+	pdf.SetFont("Arial", "", 12)
+	pdf.CellFormat(90, 8, ": "+booking.Court.Name, "0", 1, "L", false, 0, "")
+
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(40, 8, "Tanggal Main", "0", 0, "L", false, 0, "")
+	pdf.SetFont("Arial", "", 12)
+	dateStr := booking.BookingDate.Format("02 Jan 2006")
+	pdf.CellFormat(90, 8, fmt.Sprintf(": %s (%s - %s)", dateStr, booking.StartTime, booking.EndTime), "0", 1, "L", false, 0, "")
+
+	pdf.Ln(10)
+
+	// Kotak Total Harga & Status
+	pdf.SetFillColor(230, 255, 230) // Warna hijau muda
+	pdf.SetFont("Arial", "B", 14)
+	pdf.CellFormat(130, 15, fmt.Sprintf("TOTAL DIBAYAR: Rp %.2f (LUNAS)", booking.TotalPrice), "1", 1, "C", true, 0, "")
+
+	pdf.Ln(10)
+	pdf.SetFont("Arial", "I", 9)
+	pdf.CellFormat(130, 6, "*Tunjukkan e-receipt ini kepada petugas lapangan sebelum bermain.", "0", 1, "C", false, 0, "")
+
+	// 3. Simpan dan Hasilkan URL
+	fileName := fmt.Sprintf("receipt_%s.pdf", booking.BookingCode)
+	filePath := fmt.Sprintf("%s/%s", storageDir, fileName)
+
+	if err := pdf.OutputFileAndClose(filePath); err != nil {
+		return "", errors.New("gagal membuat file PDF")
+	}
+
+	// URL yang bisa diakses dari Frontend
+	pdfURL := fmt.Sprintf("http://localhost:3000/public/receipts/%s", fileName)
+	return pdfURL, nil
 }

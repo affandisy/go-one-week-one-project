@@ -26,6 +26,8 @@ func main() {
 	app := fiber.New()
 	app.Use(logger.New())
 
+	app.Static("/public", "./public")
+
 	api := app.Group("/api/v1")
 
 	// ================= PUBLIC ROUTES =================
@@ -94,6 +96,9 @@ func main() {
 	customerBookings.Post("/", bookingHandler.CreateBooking)          // Buat Booking
 	customerBookings.Get("/me", bookingHandler.GetMyBookings)         // Riwayat Pribadi
 	customerBookings.Put("/:id/cancel", bookingHandler.CancelBooking) // Batal Booking
+
+	customerBookings.Post("/:id/pay", bookingHandler.PayBooking)
+	customerBookings.Get("/:id/receipt", bookingHandler.DownloadReceipt)
 
 	log.Println("Server Padel Booking berjalan di port 3000")
 	log.Fatal(app.Listen(":3000"))

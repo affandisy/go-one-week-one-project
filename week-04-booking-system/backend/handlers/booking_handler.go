@@ -98,3 +98,31 @@ func (h *BookingHandler) CancelBooking(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Booking berhasil dibatalkan"})
 }
+
+// POST /bookings/:id/pay (Simulasi Pembayaran)
+func (h *BookingHandler) PayBooking(c *fiber.Ctx) error {
+	bookingID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	if err := h.service.ProcessPayment(bookingID, userID); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Pembayaran berhasil diverifikasi. Status menjadi PAID."})
+}
+
+// GET /bookings/:id/receipt (Generate & Dapatkan URL PDF)
+func (h *BookingHandler) DownloadReceipt(c *fiber.Ctx) error {
+	bookingID := c.Params("id")
+	userID := c.Locals("user_id").(string)
+
+	pdfURL, err := h.service.GenerateReceiptPDF(bookingID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Bukti pembayaran berhasil dibuat",
+		"pdf_url": pdfURL,
+	})
+}
