@@ -16,7 +16,7 @@ type BookingService interface {
 	GetAvailability(courtID, dateStr string) ([]map[string]interface{}, error)
 	CreateBooking(userID, courtID, dateStr, start, end string) (*models.Booking, error)
 	GetUserBookings(userID string) ([]models.Booking, error)
-	GetAllBookings() ([]models.Booking, error)
+	GetAllBookings(page int, limit int, dateFilter string) ([]models.Booking, int64, error)
 	CancelBooking(bookingID string, userID string, role string) error
 	ProcessPayment(bookingID string, userID string) error
 	GenerateReceiptPDF(bookingID string, userID string) (string, error)
@@ -142,8 +142,16 @@ func (s *bookingService) GetUserBookings(userID string) ([]models.Booking, error
 	return s.repo.GetBookingsByUser(userID)
 }
 
-func (s *bookingService) GetAllBookings() ([]models.Booking, error) {
-	return s.repo.GetAllBookings()
+func (s *bookingService) GetAllBookings(page int, limit int, dateFilter string) ([]models.Booking, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	} // Batas maksimal 100 per request
+	offset := (page - 1) * limit
+
+	return s.repo.GetAllBookings(limit, offset, dateFilter)
 }
 
 func (s *bookingService) CancelBooking(bookingID string, userID string, role string) error {
@@ -152,14 +160,23 @@ func (s *bookingService) CancelBooking(bookingID string, userID string, role str
 		return errors.New("booking tidak ditemukan")
 	}
 
-	// Validasi Otorisasi: Hanya Admin/Owner ATAU pemilik booking yang boleh membatalkan
+	// Validasi Hak Akses
 	if role == "customer" && booking.UserID.String() != userID {
 		return errors.New("anda tidak memiliki izin membatalkan booking ini")
 	}
 
-	// Hanya booking yang belum dibayar atau masih pending yang bisa dibatalkan dengan mudah
-	if booking.Status == "paid" {
-		return errors.New("booking yang sudah dibayar harus melalui proses refund ke Admin")
+	// IMPROVISASI 2: Kebijakan Waktu Pembatalan (Hanya untuk Customer)
+	if role == "customer" {
+		// Gabungkan Tanggal dan Jam Main menjadi tipe time.Time
+		playTimeStr := fmt.Sprintf("%s %s", booking.BookingDate.Format("2006-01-02"), booking.StartTime)
+		playTime, _ := time.Parse("2006-01-02 15:04", playTimeStr)
+
+		// Hitung selisih waktu sekarang dengan waktu bermain
+		hoursUntilPlay := time.Until(playTime).Hours()
+
+		if hoursUntilPlay < 24 {
+			return errors.New("pembatalan ditolak. Anda hanya bisa membatalkan maksimal 24 jam sebelum jadwal bermain")
+		}
 	}
 
 	return s.repo.UpdateStatus(bookingID, "cancelled")

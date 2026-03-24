@@ -26,14 +26,21 @@ func ConnectDatabase() {
 
 	// Migrasi Terpusat
 	err = DB.AutoMigrate(
-		&models.User{},        // Independen
-		&models.Court{},       // Independen
-		&models.PricingRule{}, // Bergantung pada Court
+		&models.User{},
+		&models.Court{},
+		&models.PricingRule{},
+		&models.Booking{},
 	)
 
 	if err != nil {
 		log.Fatal("Gagal melakukan migrasi: ", err)
 	}
+
+	DB.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_prevent_double_booking 
+		ON bookings (court_id, booking_date, start_time) 
+		WHERE status IN ('locked', 'pending', 'paid');
+	`)
 
 	log.Println("Migrasi Database Phase 1 Selesai!")
 }

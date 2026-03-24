@@ -78,12 +78,24 @@ func (h *BookingHandler) GetMyBookings(c *fiber.Ctx) error {
 
 // GET /admin/bookings
 func (h *BookingHandler) GetAllBookings(c *fiber.Ctx) error {
-	bookings, err := h.service.GetAllBookings()
+	// Ambil query parameter
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	dateFilter := c.Query("date", "") // Format: YYYY-MM-DD
+
+	bookings, total, err := h.service.GetAllBookings(page, limit, dateFilter)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "gagal mengambil data booking"})
+		return c.Status(500).JSON(fiber.Map{"error": "gagal mengambil data"})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"data": bookings})
+	return c.Status(200).JSON(fiber.Map{
+		"data": bookings,
+		"meta": fiber.Map{
+			"current_page": page,
+			"per_page":     limit,
+			"total_data":   total,
+		},
+	})
 }
 
 // PUT /bookings/:id/cancel

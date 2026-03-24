@@ -12,7 +12,7 @@ type BookingRepository interface {
 	GetBookingsByDate(courtID string, date string) ([]models.Booking, error)
 	GetPricingRules(courtID string, dayType string) ([]models.PricingRule, error)
 	GetBookingsByUser(userID string) ([]models.Booking, error)
-	GetAllBookings() ([]models.Booking, error)
+	GetAllBookings(limit int, offset int, dateFilter string) ([]models.Booking, int64, error)
 	FindByID(id string) (*models.Booking, error)
 	UpdateStatus(id string, status string) error
 	GetExpiredLockedBookings() ([]models.Booking, error)
@@ -62,10 +62,26 @@ func (r *bookingRepository) GetBookingsByUser(userID string) ([]models.Booking, 
 	return bookings, err
 }
 
-func (r *bookingRepository) GetAllBookings() ([]models.Booking, error) {
+func (r *bookingRepository) GetAllBookings(limit int, offset int, dateFilter string) ([]models.Booking, int64, error) {
 	var bookings []models.Booking
-	err := r.db.Preload("User").Preload("Court").Order("booking_date desc, start_time desc").Find(&bookings).Error
-	return bookings, err
+	var totalData int64
+
+	query := r.db.Model(&models.Booking{})
+
+	// Jika admin memfilter tanggal tertentu
+	if dateFilter != "" {
+		query = query.Where("booking_date = ?", dateFilter)
+	}
+
+	// Hitung total data untuk keperluan frontend (total pages)
+	query.Count(&totalData)
+
+	// Ambil data dengan limit dan offset
+	err := query.Preload("User").Preload("Court").
+		Order("booking_date desc, start_time desc").
+		Limit(limit).Offset(offset).Find(&bookings).Error
+
+	return bookings, totalData, err
 }
 
 func (r *bookingRepository) FindByID(id string) (*models.Booking, error) {
