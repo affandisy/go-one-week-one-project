@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/affandisy/padel-booking-system/config"
+	_ "github.com/affandisy/padel-booking-system/docs"
 	"github.com/affandisy/padel-booking-system/handlers"
 	"github.com/affandisy/padel-booking-system/middlewares"
 	"github.com/affandisy/padel-booking-system/repositories"
@@ -12,6 +13,24 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
+// @title Padel Court Booking API
+// @version 1.0
+// @description Sistem API Terintegrasi untuk pemesanan lapangan olahraga Padel.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name Developer API
+// @contact.email developer@padel.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:3000
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Masukkan token dengan format: Bearer {token}
 func main() {
 	config.ConnectDatabase()
 	db := config.DB

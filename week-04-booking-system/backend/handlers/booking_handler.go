@@ -30,7 +30,19 @@ func (h *BookingHandler) GetAvailability(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": slots})
 }
 
-// POST /bookings
+// CreateBooking godoc
+// @Summary Mengunci Slot Lapangan (Create Booking)
+// @Description Mem-booking slot lapangan yang kosong dan menguncinya selama 10 menit
+// @Tags Bookings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body object true "Data Booking" SchemaExample({\"court_id\":\"uuid-lapangan\",\"booking_date\":\"2026-03-25\",\"start_time\":\"19:00\",\"end_time\":\"20:00\"})
+// @Success 201 {object} map[string]interface{} "Slot berhasil dikunci"
+// @Failure 400 {object} map[string]string "Format tidak valid"
+// @Failure 401 {object} map[string]string "Unauthorized (Token tidak ada/salah)"
+// @Failure 409 {object} map[string]string "Conflict (Slot sudah diambil orang lain)"
+// @Router /bookings [post]
 func (h *BookingHandler) CreateBooking(c *fiber.Ctx) error {
 	var req struct {
 		CourtID     string `json:"court_id"`

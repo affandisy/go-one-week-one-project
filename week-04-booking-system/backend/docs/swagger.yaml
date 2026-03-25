@@ -1,0 +1,100 @@
+basePath: /api/v1
+host: localhost:3000
+info:
+  contact:
+    email: developer@padel.com
+    name: Developer API
+  description: Sistem API Terintegrasi untuk pemesanan lapangan olahraga Padel.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Padel Court Booking API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Mengautentikasi user dan mengembalikan token JWT
+      parameters:
+      - description: Kredensial Login
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login berhasil
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Format tidak valid
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Kredensial salah
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login Pelanggan / Admin
+      tags:
+      - Authentication
+  /bookings:
+    post:
+      consumes:
+      - application/json
+      description: Mem-booking slot lapangan yang kosong dan menguncinya selama 10
+        menit
+      parameters:
+      - description: Data Booking
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Slot berhasil dikunci
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Format tidak valid
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized (Token tidak ada/salah)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict (Slot sudah diambil orang lain)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mengunci Slot Lapangan (Create Booking)
+      tags:
+      - Bookings
+securityDefinitions:
+  BearerAuth:
+    description: 'Masukkan token dengan format: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

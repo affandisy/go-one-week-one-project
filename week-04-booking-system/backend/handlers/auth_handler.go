@@ -49,6 +49,17 @@ func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"message": "Akun berhasil diaktifkan, silakan login"})
 }
 
+// Login godoc
+// @Summary Login Pelanggan / Admin
+// @Description Mengautentikasi user dan mengembalikan token JWT
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body object true "Kredensial Login" SchemaExample({\"email\":\"budi@email.com\",\"password\":\"rahasia123\"})
+// @Success 200 {object} map[string]interface{} "Login berhasil"
+// @Failure 400 {object} map[string]string "Format tidak valid"
+// @Failure 401 {object} map[string]string "Kredensial salah"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req struct {
 		Email    string `json:"email"`
