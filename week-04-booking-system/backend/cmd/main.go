@@ -72,6 +72,9 @@ func main() {
 	dashboardService := services.NewDashboardService(dashboardRepo)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 
+	userService := services.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userService)
+
 	bookingService.RunAutoExpireJob()
 	log.Println("⚙️ Background Job Auto-Expire Booking telah diaktifkan")
 
@@ -124,6 +127,10 @@ func main() {
 
 	customerBookings.Post("/:id/pay", bookingHandler.PayBooking)
 	customerBookings.Get("/:id/receipt", bookingHandler.DownloadReceipt)
+
+	userRoutes := protected.Group("/users")
+	userRoutes.Put("/profile", userHandler.UpdateProfile)
+	userRoutes.Put("/password", userHandler.UpdatePassword)
 
 	log.Println("Server Padel Booking berjalan di port 3000")
 	log.Fatal(app.Listen(":3000"))
