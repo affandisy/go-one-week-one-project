@@ -68,6 +68,10 @@ func main() {
 	bookingService := services.NewBookingService(bookingRepo)
 	bookingHandler := handlers.NewBookingHandler(bookingService)
 
+	dashboardRepo := repositories.NewDashboardRepository(db)
+	dashboardService := services.NewDashboardService(dashboardRepo)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
+
 	bookingService.RunAutoExpireJob()
 	log.Println("⚙️ Background Job Auto-Expire Booking telah diaktifkan")
 
@@ -95,6 +99,8 @@ func main() {
 	adminRoutes.Get("/test", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"message": "Selamat datang di ruang rahasia Admin!"})
 	})
+
+	adminRoutes.Get("/dashboard-stats", dashboardHandler.GetStats)
 
 	adminCourts := adminRoutes.Group("/courts")
 	adminCourts.Post("/", courtHandler.Create)
