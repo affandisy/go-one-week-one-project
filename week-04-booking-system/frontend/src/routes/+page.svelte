@@ -118,8 +118,8 @@
             
             <div class="flex flex-col md:flex-row gap-4 mb-8">
                 <div class="flex-1">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Pilih Lapangan</label>
-                    <select bind:value={selectedCourtId} class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 bg-gray-50 font-medium">
+                    <label for="selectedCourtId" class="block text-sm font-bold text-gray-700 mb-2">Pilih Lapangan</label>
+                    <select id="selectedCourtId" bind:value={selectedCourtId} class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 bg-gray-50 font-medium">
                         <option value="">-- Pilih Lapangan --</option>
                         {#each courts as court}
                             <option value={court.id}>{court.name} ({court.type})</option>
@@ -127,8 +127,8 @@
                     </select>
                 </div>
                 <div class="flex-1">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Tanggal Main</label>
-                    <input type="date" bind:value={selectedDate} min={new Date().toISOString().split('T')[0]} 
+                    <label for="selectedDate" class="block text-sm font-bold text-gray-700 mb-2">Tanggal Main</label>
+                    <input id="selectedDate" type="date" bind:value={selectedDate} min={new Date().toISOString().split('T')[0]} 
                         class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 bg-gray-50 font-medium" />
                 </div>
             </div>
