@@ -80,6 +80,24 @@
         }
     }
 
+    async function downloadReceipt(id: string) {
+        isActionLoading = true;
+        try {
+            const res = await apiFetch(`/bookings/${id}/receipt`, { method: 'GET' });
+            
+            // Membuka URL PDF di tab baru
+            if (res.pdf_url) {
+                window.open(res.pdf_url, '_blank');
+            } else {
+                alert('URL PDF tidak ditemukan.');
+            }
+        } catch (err: any) {
+            alert(err.message || 'Gagal memuat e-receipt.');
+        } finally {
+            isActionLoading = false;
+        }
+    }
+
     // Helper untuk mengubah milidetik menjadi format Menit:Detik
     function formatTimeLeft(lockExpiry: string): string {
         const expiryTime = new Date(lockExpiry).getTime();
@@ -139,9 +157,18 @@
                                     MENUNGGU PEMBAYARAN
                                 </span>
                             {:else if b.status === 'paid'}
-                                <span class="bg-green-100 text-green-800 text-xs font-black px-2.5 py-1 rounded-full">
-                                    LUNAS
-                                </span>
+                               <button 
+                                onclick={() => downloadReceipt(b.id)} 
+                                disabled={isActionLoading}
+                                class="w-full bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg shadow hover:bg-green-700 flex items-center justify-center gap-2 transition-colors disabled:bg-green-400">
+                                
+                                {#if isActionLoading}
+                                    <span class="animate-pulse">Mencetak...</span>
+                                {:else}
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    E-Receipt (PDF)
+                                {/if}
+                            </button>
                             {:else if b.status === 'cancelled'}
                                 <span class="bg-red-100 text-red-800 text-xs font-black px-2.5 py-1 rounded-full">
                                     DIBATALKAN
