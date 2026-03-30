@@ -5,4 +5,5 @@ use (
 	./week-02-warehouse-system
 	./week-03-sekolah-system/backend
 	./week-04-booking-system/backend
+	./week-05-sistem-belajar-bahasa/backend
 )
