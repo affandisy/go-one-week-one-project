@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Layanan Basis Data PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: padel_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: padel_booking_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Layanan Backend Golang
+  backend:
+    build: 
+      context: ./backend
+    container_name: padel_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # URL Basis data menyesuaikan nama layanan 'db' di atas
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=test_password
+      - DB_NAME=padel_booking_db
+      - DB_PORT=5432
+      - JWT_SECRET=PADEL_SECRET_KEY_2026
+    depends_on:
+      - db
+
+  # Layanan Frontend SvelteKit
+  frontend:
+    build:
+      context: ./frontend
+    container_name: padel_frontend
+    restart: always
+    ports:
+      # Memetakan porta 5173 di komputer Anda ke porta 3000 di dalam kontainer Node
+      - "5173:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
