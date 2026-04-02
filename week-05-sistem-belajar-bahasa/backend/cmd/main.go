@@ -28,6 +28,11 @@ func main() {
 	moduleService := services.NewModuleService(moduleRepo)
 	moduleHandler := handlers.NewModuleHandler(moduleService)
 
+	materialRepo := repositories.NewMaterialRepository(db)
+	materialService := services.NewMaterialService(materialRepo)
+	materialHandler := handlers.NewMaterialHandler(materialService)
+	uploadHandler := handlers.NewUploadHandler()
+
 	// 3. Setup Fiber App
 	app := fiber.New()
 
@@ -53,6 +58,11 @@ func main() {
 	modules := protected.Group("/modules")
 	modules.Get("/", moduleHandler.GetAll)
 	modules.Get("/:id", moduleHandler.GetByID)
+
+	modules.Get("/:moduleId/materials", materialHandler.GetByModule) // Lihat isi kartu modul
+	modules.Post("/:moduleId/materials", materialHandler.Create)     // Tambah kartu ke modul
+
+	protected.Post("/upload", uploadHandler.UploadFile)
 
 	// 5. Jalankan Server
 	log.Println("🚀 Server Language Learning berjalan di port 3000")
