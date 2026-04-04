@@ -37,6 +37,9 @@ func main() {
 	quizService := services.NewQuizService(materialRepo, progressRepo, moduleRepo)
 	quizHandler := handlers.NewQuizHandler(quizService)
 
+	progressService := services.NewProgressService(progressRepo, moduleRepo)
+	progressHandler := handlers.NewProgressHandler(progressService)
+
 	// 3. Setup Fiber App
 	app := fiber.New()
 
@@ -70,6 +73,9 @@ func main() {
 
 	modules.Get("/:moduleId/quiz", quizHandler.StartQuiz)          // Mendapatkan soal
 	modules.Post("/:moduleId/quiz/submit", quizHandler.SubmitQuiz) // Mengirim jawaban
+
+	protected.Get("/progress", progressHandler.GetProgress)
+	protected.Post("/progress/reset", progressHandler.ResetProgress)
 
 	// 5. Jalankan Server
 	log.Println("🚀 Server Language Learning berjalan di port 3000")
