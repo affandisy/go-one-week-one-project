@@ -45,6 +45,25 @@
     function startLearning(moduleId: string) {
         goto(`/learn/${moduleId}`);
     }
+
+    let isResetting = $state(false);
+
+    async function resetProgress() {
+        if (!confirm('Peringatan: Semua skor dan level Anda akan dihapus permanen. Yakin ingin mengulang dari awal?')) {
+            return;
+        }
+
+        isResetting = true;
+        try {
+            await apiFetch('/progress/reset', { method: 'POST' });
+            alert('Progres berhasil direset! Mari mulai lembaran baru.');
+            await fetchDashboardData(); // Refresh data dashboard
+        } catch (err: any) {
+            alert(err.message || 'Gagal mereset progres.');
+        } finally {
+            isResetting = false;
+        }
+    }
 </script>
 
 <div class="min-h-screen bg-slate-50 font-sans">
