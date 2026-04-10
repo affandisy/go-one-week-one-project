@@ -67,22 +67,41 @@
         }
     }
 
+    // ... (fungsi sebelumnya di file quiz) ...
+
     async function submitQuiz() {
         isSubmitting = true;
+        const payload = { answers: collectedAnswers };
+
         try {
             const res = await apiFetch(`/modules/${moduleId}/quiz/submit`, {
                 method: 'POST',
-                data: { answers: collectedAnswers }
+                data: payload
             });
             
-            // Simpan data hasil (skor & status kelulusan) untuk ditampilkan
             result = res.data;
         } catch (err: any) {
-            errorMessage = err.message || "Gagal mengirimkan jawaban kuis.";
+            // Cek apakah error disebabkan oleh koneksi terputus (Network Error)
+            if (err.message === 'Terjadi kesalahan server' || err.message.includes('Failed to fetch')) {
+                
+                // Simpan ke Local Storage (Mekanisme Offline PRD Phase 4)
+                const offlineData = {
+                    moduleId: moduleId,
+                    payload: payload,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem(`offline_quiz_${moduleId}`, JSON.stringify(offlineData));
+
+                errorMessage = "Koneksi internet terputus. Jawaban Anda telah disimpan di perangkat dan akan dikirim saat Anda kembali online.";
+            } else {
+                errorMessage = err.message || "Gagal mengirimkan jawaban kuis.";
+            }
         } finally {
             isSubmitting = false;
         }
     }
+
+    
 </script>
 
 <div class="min-h-screen bg-slate-50 flex items-center justify-center py-10 px-4">

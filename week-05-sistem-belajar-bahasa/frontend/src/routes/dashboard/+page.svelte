@@ -64,10 +64,56 @@
             isResetting = false;
         }
     }
+
+    // ... (di dalam file dashboard/+page.svelte) ...
+
+    onMount(async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            goto('/login');
+            return;
+        }
+
+        username = localStorage.getItem('username') || 'Pelajar';
+        
+        // 1. Lakukan sinkronisasi data offline terlebih dahulu
+        await syncOfflineData();
+        
+        // 2. Baru muat data dashboard terbaru
+        await fetchDashboardData();
+    });
+
+    async function syncOfflineData() {
+        // Cari semua kunci di localStorage yang berawalan 'offline_quiz_'
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            
+            if (key && key.startsWith('offline_quiz_')) {
+                const rawData = localStorage.getItem(key);
+                if (rawData) {
+                    const offlineData = JSON.parse(rawData);
+                    
+                    try {
+                        // Mencoba mengirim ulang jawaban ke server
+                        await apiFetch(`/modules/${offlineData.moduleId}/quiz/submit`, {
+                            method: 'POST',
+                            data: offlineData.payload
+                        });
+                        
+                        // Jika berhasil, hapus data sementara dari local storage
+                        localStorage.removeItem(key);
+                        console.log(`✅ Data offline untuk modul ${offlineData.moduleId} berhasil disinkronkan.`);
+                    } catch (err) {
+                        console.warn("Sinkronisasi tertunda. Masih offline atau server gangguan.");
+                    }
+                }
+            }
+        }
+    }
 </script>
 
 <div class="min-h-screen bg-slate-50 font-sans">
-    <nav class="bg-white border-b border-slate-200 px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center sticky top-0 z-10">
+   <nav class="bg-white border-b border-slate-200 px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center sticky top-0 z-10">
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-black text-xl">
                 A
@@ -76,7 +122,15 @@
         </div>
         <div class="flex items-center gap-4">
             <span class="text-sm font-bold text-slate-600 hidden sm:block">Halo, {username}!</span>
-            <button onclick={handleLogout} class="text-sm font-bold text-red-500 hover:text-red-700 transition-colors">
+            
+            <button 
+                onclick={resetProgress} 
+                disabled={isResetting}
+                class="text-sm font-bold text-orange-500 hover:text-orange-700 transition-colors disabled:opacity-50">
+                {isResetting ? 'Mereset...' : 'Reset Progres'}
+            </button>
+            
+            <button onclick={handleLogout} class="text-sm font-bold text-slate-400 hover:text-red-500 transition-colors ml-2">
                 Keluar
             </button>
         </div>
