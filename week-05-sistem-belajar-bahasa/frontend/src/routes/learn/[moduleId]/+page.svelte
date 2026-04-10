@@ -43,10 +43,25 @@
         goto(`/quiz/${moduleId}`);
     }
 
-    function playAudio(url: string) {
-        if (!url) return;
-        const audio = new Audio(url);
-        audio.play().catch(e => console.error("Gagal memutar audio", e));
+    let targetLanguage = 'en-US'; 
+
+    function playAudio(url: string, textToRead: string) {
+        // Jika Admin mengunggah audio asli, putar audio tersebut
+        if (url) {
+            const audio = new Audio(url);
+            audio.play().catch(e => console.error("Gagal memutar audio", e));
+            return;
+        }
+
+        // IMPROVISASI: Jika tidak ada file audio, gunakan fitur Robot Suara Browser (TTS)
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = targetLanguage;
+            utterance.rate = 0.9; // Diperlambat sedikit agar pemula bisa mendengar jelas
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert('Browser Anda tidak mendukung fitur suara otomatis.');
+        }
     }
 </script>
 
@@ -89,12 +104,12 @@
                 </p>
 
                 {#if cards[currentIndex].audio_url}
-                    <button 
-                        onclick={() => playAudio(cards[currentIndex].audio_url)}
-                        aria-label="Dengarkan audio"
-                        class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm hover:shadow-md cursor-pointer">
-                        <svg class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
+                <button 
+                    onclick={() => playAudio(cards[currentIndex].audio_url, cards[currentIndex].question)}
+                    aria-label="Dengarkan pengucapan"
+                    class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm hover:shadow-md cursor-pointer">
+                    <svg class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
                     <span class="text-xs font-bold text-slate-400 mt-2 uppercase tracking-wider">Dengarkan</span>
                 {/if}
             </div>
