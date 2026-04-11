@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/affandi/belajar-bahasa/config"
 	"github.com/affandi/belajar-bahasa/handlers"
@@ -11,14 +12,29 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// 1. Inisialisasi Database
+	if err := godotenv.Load(); err != nil {
+		log.Println("Catatan: File .env tidak ditemukan, menggunakan variabel OS.")
+	}
+
+	// 2. Inisialisasi Database
 	config.ConnectDatabase()
 	db := config.DB
 
-	jwtSecret := "test"
+	// 3. Tarik Secret Key & Port dari Environment
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("Kritis: Variabel lingkungan JWT_SECRET belum diatur!")
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000" // Nilai bawaan (fallback)
+	}
 
 	userRepo := repositories.NewUserRepository(db)
 	authService := services.NewAuthService(userRepo, jwtSecret)
