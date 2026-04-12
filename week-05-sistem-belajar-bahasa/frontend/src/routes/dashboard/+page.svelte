@@ -10,12 +10,12 @@
     let username = $state('');
 
     onMount(async () => {
-        // Proteksi Halaman: Cek apakah user sudah login
-        const token = localStorage.getItem('token');
-        if (!token) {
-            goto('/login');
-            return;
-        }
+        // // Proteksi Halaman: Cek apakah user sudah login
+        // const token = localStorage.getItem('token');
+        // if (!token) {
+        //     goto('/login');
+        //     return;
+        // }
 
         username = localStorage.getItem('username') || 'Pelajar';
         await fetchDashboardData();
