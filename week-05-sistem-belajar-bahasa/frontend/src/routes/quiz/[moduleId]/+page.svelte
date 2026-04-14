@@ -215,4 +215,46 @@
             </div>
         </div>
     {/if}
+    {#if questions[currentIndex].content_type === 'quiz_unscramble'}
+                        <div class="w-full flex flex-col gap-6">
+                            
+                            <div class="min-h-[80px] p-4 border-2 border-dashed border-slate-300 bg-slate-50 rounded-2xl flex flex-wrap content-start gap-2 transition-all">
+                                {#each selectedWords as word, i}
+                                    <button 
+                                        onclick={() => removeUnscrambleWord(word, i)}
+                                        class="px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow hover:bg-indigo-700 transition-transform hover:-translate-y-0.5">
+                                        {word}
+                                    </button>
+                                {/each}
+                                
+                                {#if selectedWords.length === 0}
+                                    <span class="text-slate-400 font-medium m-auto text-sm">Susun kata-kata di sini...</span>
+                                {/if}
+                            </div>
+
+                            <div class="flex flex-wrap justify-center gap-2 min-h-[60px]">
+                                {#each availableWords as word, i}
+                                    <button 
+                                        onclick={() => selectUnscrambleWord(word, i)}
+                                        class="px-4 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl shadow-sm hover:border-indigo-300 hover:text-indigo-600 transition-transform hover:-translate-y-0.5">
+                                        {word}
+                                    </button>
+                                {/each}
+                            </div>
+                        </div>
+
+                    {:else}
+                        <div class="space-y-3">
+                            {#each parseOptions(questions[currentIndex].options) as opt}
+                                <button 
+                                    onclick={() => selectOption(opt)}
+                                    class="w-full p-4 rounded-2xl border-2 text-left font-bold transition-all duration-200
+                                    {currentSelection === opt 
+                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm' 
+                                        : 'border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-slate-50'}">
+                                    {opt}
+                                </button>
+                            {/each}
+                        </div>
+                    {/if}
 </div>
