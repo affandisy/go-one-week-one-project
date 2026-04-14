@@ -6,30 +6,24 @@
 
     let moduleId = $page.params.moduleId;
     
-    // State Svelte 5
     let questions = $state<any[]>([]);
     let currentIndex = $state(0);
-    
-    // Menyimpan jawaban sementara untuk pertanyaan yang sedang tampil
     let currentSelection = $state(''); 
-    
-    // Menyimpan rekap seluruh jawaban untuk dikirim ke Backend
     let collectedAnswers = $state<{material_id: string, selected: string}[]>([]);
     
-    // Status UI
+    let availableWords = $state<string[]>([]);
+    let selectedWords = $state<string[]>([]);
+    
     let isLoading = $state(true);
     let isSubmitting = $state(false);
     let errorMessage = $state('');
-    let result = $state<any>(null); // Menyimpan hasil dari Backend setelah submit
+    let result = $state<any>(null);
 
     onMount(async () => {
         try {
             const res = await apiFetch(`/modules/${moduleId}/quiz`);
             questions = res.data.questions || [];
-            
-            if (questions.length === 0) {
-                errorMessage = "Kuis belum tersedia untuk level ini.";
-            }
+            if (questions.length === 0) errorMessage = "Kuis belum tersedia untuk level ini.";
         } catch (err: any) {
             errorMessage = err.message || "Gagal memuat soal kuis.";
         } finally {
@@ -37,7 +31,6 @@
         }
     });
 
-    // Mengubah string JSON options menjadi Array
     function parseOptions(optionsStr: string): string[] {
         try {
             return JSON.parse(optionsStr);
@@ -46,28 +39,53 @@
         }
     }
 
+    $effect(() => {
+        const currentQ = questions[currentIndex];
+        if (currentQ && currentQ.content_type === 'quiz_unscramble') {
+            // Memuat kata-kata acak dari database (dari kolom options)
+            availableWords = parseOptions(currentQ.options);
+            selectedWords = [];
+            currentSelection = '';
+        } else {
+            // Reset jika kembali ke soal MCQ
+            currentSelection = '';
+        }
+    });
+
     function selectOption(opt: string) {
         currentSelection = opt;
     }
 
-    function handleNext() {
-        // Simpan jawaban pengguna ke dalam koleksi
-        collectedAnswers.push({
-            material_id: questions[currentIndex].id,
-            selected: currentSelection
-        });
-
-        if (currentIndex < questions.length - 1) {
-            // Lanjut ke soal berikutnya dan reset pilihan
-            currentIndex++;
-            currentSelection = '';
-        } else {
-            // Jika ini soal terakhir, kirim ke Backend
-            submitQuiz();
-        }
+    function selectUnscrambleWord(word: string, index: number) {
+        // Pindahkan kata dari available ke selected
+        selectedWords.push(word);
+        availableWords.splice(index, 1);
+        // Gabungkan array menjadi string jawaban (contoh: "I eat apple")
+        currentSelection = selectedWords.join(' ');
     }
 
-    // ... (fungsi sebelumnya di file quiz) ...
+    function removeUnscrambleWord(word: string, index: number) {
+        // Kembalikan kata dari selected ke available
+        availableWords.push(word);
+        selectedWords.splice(index, 1);
+        // Update string jawaban
+        currentSelection = selectedWords.join(' ');
+    }
+
+
+    function handleNext() {
+            collectedAnswers.push({
+                material_id: questions[currentIndex].id,
+                selected: currentSelection
+            });
+
+            if (currentIndex < questions.length - 1) {
+                currentIndex++;
+                // Note: $effect akan otomatis mereset state unscramble untuk soal berikutnya
+            } else {
+                submitQuiz();
+            }
+        }
 
     async function submitQuiz() {
         isSubmitting = true;
