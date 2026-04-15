@@ -1,11 +1,18 @@
 <script lang="ts">
     import { apiFetch } from '$lib/api';
     import { goto } from '$app/navigation';
+    import { page } from '$app/state';
 
     let username = $state('');
     let password = $state('');
     let isLoading = $state(false);
     let errorMessage = $state('');
+
+    let moduleId = page.params.moduleId;
+    const errorParam = page.url.searchParams.get('error');
+    if (errorParam === 'session_expired') {
+        errorMessage = 'Sesi Anda telah berakhir karena alasan keamanan. Silakan masuk kembali.';
+    }
 
     async function handleLogin(e: Event) {
         e.preventDefault();
