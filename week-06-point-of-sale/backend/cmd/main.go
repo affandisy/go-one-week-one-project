@@ -6,6 +6,7 @@ import (
 
 	"github.com/affandisy/pos-system/config"
 	"github.com/affandisy/pos-system/handlers"
+	"github.com/affandisy/pos-system/middlewares"
 	"github.com/affandisy/pos-system/models"
 	"github.com/affandisy/pos-system/repositories"
 	"github.com/affandisy/pos-system/services"
@@ -29,6 +30,10 @@ func main() {
 	userRepo := repositories.NewUserRepository(db)
 	authService := services.NewAuthService(userRepo, jwtSecret)
 	authHandler := handlers.NewAuthHandler(authService)
+
+	productRepo := repositories.NewProductRepository(db)
+	productService := services.NewProductService(productRepo)
+	productHandler := handlers.NewProductHandler(productService)
 
 	// --- AUTO SEEDER UNTUK AKUN PEMILIK ---
 	count, _ := userRepo.Count()
@@ -54,6 +59,17 @@ func main() {
 
 	// Rute Publik
 	api.Post("/auth/login", authHandler.Login)
+
+	// --- RUTE TERPROTEKSI (Wajib Login) ---
+	protected := api.Group("/", middlewares.Protected(jwtSecret))
+
+	// Rute Produk
+	products := protected.Group("/products")
+	products.Get("/", productHandler.GetAll)
+	products.Get("/:id", productHandler.GetByID)
+	products.Post("/", productHandler.Create)
+	products.Put("/:id", productHandler.Update)
+	products.Delete("/:id", productHandler.Delete)
 
 	port := os.Getenv("PORT")
 	if port == "" {
