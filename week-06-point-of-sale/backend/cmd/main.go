@@ -35,6 +35,10 @@ func main() {
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
 
+	stockRepo := repositories.NewStockRepository(db)
+	stockService := services.NewStockService(stockRepo)
+	stockHandler := handlers.NewStockHandler(stockService)
+
 	// --- AUTO SEEDER UNTUK AKUN PEMILIK ---
 	count, _ := userRepo.Count()
 	if count == 0 {
@@ -70,6 +74,11 @@ func main() {
 	products.Post("/", productHandler.Create)
 	products.Put("/:id", productHandler.Update)
 	products.Delete("/:id", productHandler.Delete)
+
+	// Rute Manajemen Stok (Baru)
+	stocks := protected.Group("/stocks")
+	stocks.Post("/in", stockHandler.StockIn)                   // Catat Barang Masuk
+	stocks.Get("/history/:productId", stockHandler.GetHistory) // Lihat riwayat per produk
 
 	port := os.Getenv("PORT")
 	if port == "" {
