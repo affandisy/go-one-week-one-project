@@ -44,6 +44,11 @@ func main() {
 	transactionService := services.NewTransactionService(transactionRepo, productRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
+	// --- INISIASI MODUL LAPORAN ---
+	reportRepo := repositories.NewReportRepository(db)
+	reportService := services.NewReportService(reportRepo)
+	reportHandler := handlers.NewReportHandler(reportService)
+
 	// --- AUTO SEEDER UNTUK AKUN PEMILIK ---
 	count, _ := userRepo.Count()
 	if count == 0 {
@@ -87,6 +92,11 @@ func main() {
 
 	// Rute Kasir / Checkout
 	protected.Post("/checkout", transactionHandler.Checkout)
+
+	// Rute Laporan (Baru)
+	reports := protected.Group("/reports")
+	reports.Get("/sales/daily", reportHandler.GetDailySales)
+	reports.Get("/stocks/low", reportHandler.GetLowStocks)
 
 	port := os.Getenv("PORT")
 	if port == "" {
