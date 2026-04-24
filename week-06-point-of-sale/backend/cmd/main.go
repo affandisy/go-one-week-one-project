@@ -69,32 +69,38 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New())
 
+	// Middleware Proteksi
+	jwtAuth := middlewares.Protected(jwtSecret)
+	onlyOwnerAdmin := middlewares.RequireRole("owner", "admin")
+	// Kasir diizinkan mengakses produk dan transaksi
+	anyRole := middlewares.RequireRole("owner", "admin", "cashier")
+
 	api := app.Group("/api/v1")
 
 	// Rute Publik
 	api.Post("/auth/login", authHandler.Login)
 
-	// --- RUTE TERPROTEKSI (Wajib Login) ---
-	protected := api.Group("/", middlewares.Protected(jwtSecret))
+	// --- RUTE TERPROTEKSI ---
+	protected := api.Group("/", jwtAuth)
 
-	// Rute Produk
+	// Produk: Kasir cuma bisa lihat, Pemilik/Admin bisa tambah/ubah/hapus
 	products := protected.Group("/products")
-	products.Get("/", productHandler.GetAll)
-	products.Get("/:id", productHandler.GetByID)
-	products.Post("/", productHandler.Create)
-	products.Put("/:id", productHandler.Update)
-	products.Delete("/:id", productHandler.Delete)
+	products.Get("/", anyRole, productHandler.GetAll)
+	products.Get("/:id", anyRole, productHandler.GetByID)
+	products.Post("/", onlyOwnerAdmin, productHandler.Create)
+	products.Put("/:id", onlyOwnerAdmin, productHandler.Update)
+	products.Delete("/:id", onlyOwnerAdmin, productHandler.Delete)
 
-	// Rute Manajemen Stok
-	stocks := protected.Group("/stocks")
-	stocks.Post("/in", stockHandler.StockIn)                   // Catat Barang Masuk
-	stocks.Get("/history/:productId", stockHandler.GetHistory) // Lihat riwayat per produk
+	// Manajemen Stok: Hanya Pemilik & Admin (PRD 5.3)
+	stocks := protected.Group("/stocks", onlyOwnerAdmin)
+	stocks.Post("/in", stockHandler.StockIn)
+	stocks.Get("/history/:productId", stockHandler.GetHistory)
 
-	// Rute Kasir / Checkout
-	protected.Post("/checkout", transactionHandler.Checkout)
+	// Kasir / Checkout: Bisa diakses semua (Kasir, Pemilik)
+	protected.Post("/checkout", anyRole, transactionHandler.Checkout)
 
-	// Rute Laporan (Baru)
-	reports := protected.Group("/reports")
+	// Laporan: HANYA PEMILIK
+	reports := protected.Group("/reports", middlewares.RequireRole("owner"))
 	reports.Get("/sales/daily", reportHandler.GetDailySales)
 	reports.Get("/stocks/low", reportHandler.GetLowStocks)
 

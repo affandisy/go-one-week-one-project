@@ -7,6 +7,7 @@ import (
 
 	"github.com/affandisy/pos-system/models"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -45,4 +46,30 @@ func ConnectDatabase() {
 
 	DB = database
 	log.Println("Database POS berhasil terhubung dan dimigrasi.")
+}
+
+func ConnectDatabaseSQLite() {
+	// PRD Bab 5.6: Data disimpan secara lokal (SQLite)
+	// Ini akan otomatis membuat file pos_local.db di dalam folder aplikasi
+	database, err := gorm.Open(sqlite.Open("pos_local.db"), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Gagal terhubung ke database SQLite:", err)
+	}
+
+	// UUID extension tidak diperlukan di SQLite karena kita bisa menggunakan string/text
+
+	err = database.AutoMigrate(
+		&models.User{},
+		&models.Supplier{},
+		&models.Product{},
+		&models.Transaction{},
+		&models.TransactionDetail{},
+		&models.StockMovement{},
+	)
+	if err != nil {
+		log.Fatal("Gagal melakukan migrasi database:", err)
+	}
+
+	DB = database
+	log.Println("✅ Database SQLite Lokal berhasil terhubung! (Siap untuk mode offline)")
 }
