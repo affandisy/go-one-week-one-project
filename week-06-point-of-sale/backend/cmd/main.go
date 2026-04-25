@@ -49,6 +49,10 @@ func main() {
 	reportService := services.NewReportService(reportRepo)
 	reportHandler := handlers.NewReportHandler(reportService)
 
+	// Inisiasi Modul User (Baru)
+	userService := services.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userService)
+
 	// --- AUTO SEEDER UNTUK AKUN PEMILIK ---
 	count, _ := userRepo.Count()
 	if count == 0 {
@@ -103,6 +107,13 @@ func main() {
 	reports := protected.Group("/reports", middlewares.RequireRole("owner"))
 	reports.Get("/sales/daily", reportHandler.GetDailySales)
 	reports.Get("/stocks/low", reportHandler.GetLowStocks)
+
+	// Rute Manajemen Pengguna (HANYA OWNER & ADMIN)
+	users := protected.Group("/users", onlyOwnerAdmin)
+	users.Get("/", userHandler.GetAll)
+	users.Post("/", userHandler.Create)
+	users.Put("/:id", userHandler.Update)
+	users.Delete("/:id", userHandler.Delete)
 
 	port := os.Getenv("PORT")
 	if port == "" {
