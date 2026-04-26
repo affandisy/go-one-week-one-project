@@ -53,6 +53,11 @@ func main() {
 	userService := services.NewUserService(userRepo)
 	userHandler := handlers.NewUserHandler(userService)
 
+	// Inisiasi Modul Pemasok (Baru)
+	supplierRepo := repositories.NewSupplierRepository(db)
+	supplierService := services.NewSupplierService(supplierRepo)
+	supplierHandler := handlers.NewSupplierHandler(supplierService)
+
 	// --- AUTO SEEDER UNTUK AKUN PEMILIK ---
 	count, _ := userRepo.Count()
 	if count == 0 {
@@ -114,6 +119,14 @@ func main() {
 	users.Post("/", userHandler.Create)
 	users.Put("/:id", userHandler.Update)
 	users.Delete("/:id", userHandler.Delete)
+
+	// Rute Manajemen Pemasok (HANYA OWNER & ADMIN)
+	suppliers := protected.Group("/suppliers", onlyOwnerAdmin)
+	suppliers.Get("/", supplierHandler.GetAll)
+	suppliers.Get("/:id", supplierHandler.GetByID)
+	suppliers.Post("/", supplierHandler.Create)
+	suppliers.Put("/:id", supplierHandler.Update)
+	suppliers.Delete("/:id", supplierHandler.Delete)
 
 	port := os.Getenv("PORT")
 	if port == "" {
