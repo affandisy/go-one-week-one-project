@@ -46,7 +46,7 @@ func main() {
 
 	// --- INISIASI MODUL LAPORAN ---
 	reportRepo := repositories.NewReportRepository(db)
-	reportService := services.NewReportService(reportRepo)
+	reportService := services.NewReportService(reportRepo, productRepo)
 	reportHandler := handlers.NewReportHandler(reportService)
 
 	// Inisiasi Modul User (Baru)
