@@ -51,7 +51,7 @@ func ConnectDatabase() {
 func ConnectDatabaseSQLite() {
 	// PRD Bab 5.6: Data disimpan secara lokal (SQLite)
 	// Ini akan otomatis membuat file pos_local.db di dalam folder aplikasi
-	database, err := gorm.Open(sqlite.Open("pos_local.db"), &gorm.Config{})
+	database, err := gorm.Open(sqlite.Open("data/pos_local.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Gagal terhubung ke database SQLite:", err)
 	}

@@ -1,7 +1,7 @@
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
 
-const API_URL = 'http://localhost:3000/api/v1';
+const API_URL = '/api/v1';
 
 export async function apiFetch(endpoint: string, options: RequestInit & { data?: any } = {}) {
     let token = '';
