@@ -6,4 +6,6 @@ use (
 	./week-03-sekolah-system/backend
 	./week-04-booking-system/backend
 	./week-05-sistem-belajar-bahasa/backend
+	./week-06-point-of-sale/backend
+	./week-07-pencatatan-keuangan/backend
 )
