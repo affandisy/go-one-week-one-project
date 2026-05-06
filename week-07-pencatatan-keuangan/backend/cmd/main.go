@@ -21,6 +21,11 @@ func main() {
 	masterService := services.NewMasterService(masterRepo)
 	masterHandler := handlers.NewMasterHandler(masterService)
 
+	// Inisiasi Modul Transaksi (BARU)
+	transactionRepo := repositories.NewTransactionRepository(config.DB)
+	transactionService := services.NewTransactionService(transactionRepo, masterRepo)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
+
 	app := fiber.New()
 
 	// CORS agar bisa diakses oleh React Frontend nantinya
@@ -31,6 +36,10 @@ func main() {
 	// Rute Modul Master
 	api.Get("/wallet", masterHandler.GetWallet)
 	api.Get("/categories", masterHandler.GetCategories)
+
+	// Rute Modul Transaksi (BARU)
+	api.Post("/transactions", transactionHandler.Create)
+	api.Get("/transactions/recent", transactionHandler.GetHistory)
 
 	log.Println("Peladen berjalan di port 3000...")
 	log.Fatal(app.Listen(":3000"))
