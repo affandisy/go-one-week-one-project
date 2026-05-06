@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/affandisy/financial-app/models"
 	"gorm.io/gorm"
 )
@@ -11,6 +13,7 @@ type TransactionRepository interface {
 	FindByID(id string) (*models.Transaction, error)
 	DeleteWithWalletUpdate(trx *models.Transaction, wallet *models.Wallet) error
 	UpdateWithWalletUpdate(oldTrx *models.Transaction, newTrx *models.Transaction, wallet *models.Wallet) error
+	GetTransactionsByDateRange(startDate, endDate time.Time) ([]models.Transaction, error)
 }
 
 type transactionRepository struct {
@@ -72,4 +75,14 @@ func (r *transactionRepository) UpdateWithWalletUpdate(oldTrx *models.Transactio
 		}
 		return nil
 	})
+}
+
+func (r *transactionRepository) GetTransactionsByDateRange(startDate, endDate time.Time) ([]models.Transaction, error) {
+	var transactions []models.Transaction
+	// Preload Category sangat penting agar kita bisa membedah pie chart nantinya
+	err := r.db.Preload("Category").
+		Where("date_time >= ? AND date_time < ?", startDate, endDate).
+		Order("date_time desc").
+		Find(&transactions).Error
+	return transactions, err
 }

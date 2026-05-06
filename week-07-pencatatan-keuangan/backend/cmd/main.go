@@ -26,6 +26,10 @@ func main() {
 	transactionService := services.NewTransactionService(transactionRepo, masterRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
+	reportRepo := repositories.NewReportRepository(config.DB)
+	reportService := services.NewReportService(reportRepo)
+	reportHandler := handlers.NewReportHandler(reportService)
+
 	app := fiber.New()
 
 	// CORS agar bisa diakses oleh React Frontend nantinya
@@ -37,10 +41,15 @@ func main() {
 	api.Get("/wallet", masterHandler.GetWallet)
 	api.Get("/categories", masterHandler.GetCategories)
 
-	// Rute Modul Transaksi (BARU)
+	// Rute Transaksi
 	api.Post("/transactions", transactionHandler.Create)
 	api.Get("/transactions/recent", transactionHandler.GetHistory)
+	api.Put("/transactions/:id", transactionHandler.Update)    // FR-003
+	api.Delete("/transactions/:id", transactionHandler.Delete) // FR-003
 
-	log.Println("Peladen berjalan di port 3000...")
+	// Rute Laporan
+	api.Get("/reports/monthly", reportHandler.GetMonthlySummary) // FR-004
+
+	log.Println("Server berjalan di port 3000...")
 	log.Fatal(app.Listen(":3000"))
 }
