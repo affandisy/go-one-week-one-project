@@ -35,3 +35,23 @@ func (h *TransactionHandler) GetHistory(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"data": history})
 }
+
+func (h *TransactionHandler) Delete(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := h.service.DeleteTransaction(id); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"message": "Transaksi dihapus"})
+}
+
+func (h *TransactionHandler) Update(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req services.TransactionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Format invalid"})
+	}
+	if err := h.service.UpdateTransaction(id, req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"message": "Transaksi diperbarui"})
+}

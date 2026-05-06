@@ -8,6 +8,9 @@ import (
 type TransactionRepository interface {
 	CreateWithWalletUpdate(trx *models.Transaction, wallet *models.Wallet) error
 	GetRecentTransactions(limit int) ([]models.Transaction, error)
+	FindByID(id string) (*models.Transaction, error)
+	DeleteWithWalletUpdate(trx *models.Transaction, wallet *models.Wallet) error
+	UpdateWithWalletUpdate(oldTrx *models.Transaction, newTrx *models.Transaction, wallet *models.Wallet) error
 }
 
 type transactionRepository struct {
@@ -39,4 +42,34 @@ func (r *transactionRepository) GetRecentTransactions(limit int) ([]models.Trans
 	// Preload Category agar nama dan ikon kategori ikut terbawa
 	err := r.db.Preload("Category").Order("date_time desc").Limit(limit).Find(&transactions).Error
 	return transactions, err
+}
+
+func (r *transactionRepository) FindByID(id string) (*models.Transaction, error) {
+	var trx models.Transaction
+	err := r.db.First(&trx, "id = ?", id).Error
+	return &trx, err
+}
+
+func (r *transactionRepository) DeleteWithWalletUpdate(trx *models.Transaction, wallet *models.Wallet) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete(trx).Error; err != nil {
+			return err
+		}
+		if err := tx.Save(wallet).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (r *transactionRepository) UpdateWithWalletUpdate(oldTrx *models.Transaction, newTrx *models.Transaction, wallet *models.Wallet) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(newTrx).Error; err != nil {
+			return err
+		}
+		if err := tx.Save(wallet).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 }

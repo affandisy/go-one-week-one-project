@@ -19,6 +19,8 @@ type TransactionRequest struct {
 type TransactionService interface {
 	RecordTransaction(req TransactionRequest) error
 	GetDashboardHistory() ([]models.Transaction, error)
+	DeleteTransaction(id string) error
+	UpdateTransaction(id string, req TransactionRequest) error
 }
 
 type transactionService struct {
@@ -77,4 +79,51 @@ func (s *transactionService) RecordTransaction(req TransactionRequest) error {
 
 func (s *transactionService) GetDashboardHistory() ([]models.Transaction, error) {
 	return s.trxRepo.GetRecentTransactions(10) // Menampilkan 10 transaksi terakhir
+}
+
+func (s *transactionService) DeleteTransaction(id string) error {
+	trx, err := s.trxRepo.FindByID(id)
+	if err != nil {
+		return errors.New("transaksi tidak ditemukan")
+	}
+
+	wallet, _ := s.masterRepo.GetDefaultWallet()
+
+	// Kembalikan saldo seperti sebelum transaksi terjadi
+	if trx.Type == "expense" {
+		wallet.Balance += trx.Amount
+	} else {
+		wallet.Balance -= trx.Amount
+	}
+
+	return s.trxRepo.DeleteWithWalletUpdate(trx, wallet)
+}
+
+func (s *transactionService) UpdateTransaction(id string, req TransactionRequest) error {
+	trx, err := s.trxRepo.FindByID(id)
+	if err != nil {
+		return errors.New("transaksi tidak ditemukan")
+	}
+	wallet, _ := s.masterRepo.GetDefaultWallet()
+
+	// 1. Batalkan efek transaksi lama terhadap saldo
+	if trx.Type == "expense" {
+		wallet.Balance += trx.Amount
+	} else {
+		wallet.Balance -= trx.Amount
+	}
+
+	// 2. Terapkan efek transaksi baru
+	trx.CategoryID = req.CategoryID
+	trx.Amount = req.Amount
+	trx.Note = req.Note
+	// (Asumsi: Tipe 'income'/'expense' tidak boleh diubah untuk mencegah bug kompleks. Jika salah pilih, user disarankan hapus & buat baru)
+
+	if trx.Type == "expense" {
+		wallet.Balance -= trx.Amount
+	} else {
+		wallet.Balance += trx.Amount
+	}
+
+	return s.trxRepo.UpdateWithWalletUpdate(trx, trx, wallet)
 }
