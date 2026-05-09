@@ -14,7 +14,7 @@ import (
 var DB *gorm.DB
 
 func ConnectDatabase() {
-	database, err := gorm.Open(sqlite.Open("keuangan_app.db"), &gorm.Config{})
+	database, err := gorm.Open(sqlite.Open("data/keuangan_app.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Gagal terhubung ke database SQLite:", err)
 	}
