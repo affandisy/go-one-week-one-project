@@ -21,9 +21,14 @@ func main() {
 	masterService := services.NewMasterService(masterRepo)
 	masterHandler := handlers.NewMasterHandler(masterService)
 
+	// 2. Modul Dompet (BARU)
+	walletRepo := repositories.NewWalletRepository(config.DB)
+	walletService := services.NewWalletService(walletRepo)
+	walletHandler := handlers.NewWalletHandler(walletService)
+
 	// Inisiasi Modul Transaksi (BARU)
 	transactionRepo := repositories.NewTransactionRepository(config.DB)
-	transactionService := services.NewTransactionService(transactionRepo, masterRepo)
+	transactionService := services.NewTransactionService(transactionRepo, walletRepo, masterRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	reportRepo := repositories.NewReportRepository(config.DB)
@@ -46,6 +51,13 @@ func main() {
 	api.Get("/transactions/recent", transactionHandler.GetHistory)
 	api.Put("/transactions/:id", transactionHandler.Update)    // FR-003
 	api.Delete("/transactions/:id", transactionHandler.Delete) // FR-003
+
+	wallets := api.Group("/wallets")
+	wallets.Get("/", walletHandler.GetAll)
+	wallets.Get("/:id", walletHandler.GetByID)
+	wallets.Post("/", walletHandler.Create)
+	wallets.Put("/:id", walletHandler.Update)
+	wallets.Delete("/:id", walletHandler.Delete)
 
 	// Rute Laporan
 	api.Get("/reports/monthly", reportHandler.GetMonthlySummary) // FR-004

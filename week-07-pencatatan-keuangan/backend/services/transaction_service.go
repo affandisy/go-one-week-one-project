@@ -10,7 +10,8 @@ import (
 )
 
 type TransactionRequest struct {
-	Type       string  `json:"type"` // "income" atau "expense"[cite: 1]
+	WalletID   string  `json:"wallet_id"`
+	Type       string  `json:"type"`
 	CategoryID string  `json:"category_id"`
 	Amount     float64 `json:"amount"`
 	Note       string  `json:"note"`
@@ -25,28 +26,25 @@ type TransactionService interface {
 
 type transactionService struct {
 	trxRepo    repositories.TransactionRepository
+	walletRepo repositories.WalletRepository
 	masterRepo repositories.MasterRepository
 }
 
-func NewTransactionService(trxRepo repositories.TransactionRepository, masterRepo repositories.MasterRepository) TransactionService {
-	return &transactionService{trxRepo, masterRepo}
+func NewTransactionService(t repositories.TransactionRepository, w repositories.WalletRepository, m repositories.MasterRepository) TransactionService {
+	return &transactionService{t, w, m}
 }
 
 func (s *transactionService) RecordTransaction(req TransactionRequest) error {
-	// Aturan Bisnis 1: Nominal > 0[cite: 1]
 	if req.Amount <= 0 {
 		return errors.New("nominal harus lebih dari 0")
 	}
-	if req.Type != "income" && req.Type != "expense" {
-		return errors.New("tipe transaksi tidak valid")
-	}
 
-	wallet, err := s.masterRepo.GetDefaultWallet()
+	wallet, err := s.walletRepo.FindByID(req.WalletID)
 	if err != nil {
-		return errors.New("dompet utama tidak ditemukan")
+		return errors.New("dompet tidak valid atau tidak ditemukan")
 	}
 
-	// Aturan Bisnis 2: Auto-default kategori "Lainnya" jika kosong[cite: 1]
+	// Logika kategori default "Lainnya" tetap sama
 	if req.CategoryID == "" {
 		categories, _ := s.masterRepo.GetCategoriesByType(req.Type)
 		for _, cat := range categories {
@@ -67,7 +65,7 @@ func (s *transactionService) RecordTransaction(req TransactionRequest) error {
 		DateTime:   time.Now(),
 	}
 
-	// Kalkulasi saldo dompet
+	// Update saldo dompet yang bersangkutan
 	if req.Type == "expense" {
 		wallet.Balance -= req.Amount
 	} else {
