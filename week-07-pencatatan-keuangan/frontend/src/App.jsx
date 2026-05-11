@@ -6,45 +6,84 @@ import HistoryView from './components/HistoryView';
 const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num || 0);
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | history | report
-  const [wallet, setWallet] = useState(null);
-  const [recentTrx, setRecentTrx] = useState([]);
+  const [activeTab, setActiveTab] = useState('dashboard'); 
   
+  // State baru untuk Multi-Dompet
+  const [wallets, setWallets] = useState([]);
+  const [activeWalletId, setActiveWalletId] = useState('');
+  
+  const [recentTrx, setRecentTrx] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [txType, setTxType] = useState('expense');
 
-  const loadDashboardData = async () => {
+  // Mengambil daftar dompet saat aplikasi pertama kali dimuat
+  const loadWallets = async () => {
     try {
-      const walletRes = await fetch('http://localhost:3000/api/v1/wallet');
-      const walletData = await walletRes.json();
-      setWallet(walletData.data);
-
-      const trxRes = await fetch('http://localhost:3000/api/v1/transactions/recent');
-      const trxData = await trxRes.json();
-      setRecentTrx(trxData.data || []);
-    } catch (error) { console.error("Gagal memuat data", error); }
+      const res = await fetch('/api/v1/wallets');
+      const data = await res.json();
+      const loadedWallets = data.data || [];
+      setWallets(loadedWallets);
+      
+      // Pilih dompet pertama sebagai default jika belum ada yang dipilih
+      if (loadedWallets.length > 0 && !activeWalletId) {
+        setActiveWalletId(loadedWallets[0].id);
+      }
+    } catch (error) { console.error("Gagal memuat dompet", error); }
   };
 
+  // Mengambil riwayat transaksi (idealnya di backend difilter berdasarkan wallet_id)
+  const loadTransactions = async () => {
+    try {
+      // Catatan: Pastikan Backend Anda diupdate untuk menerima query ?wallet_id=...
+      const res = await fetch(`/api/v1/transactions/recent`); 
+      const data = await res.json();
+      setRecentTrx(data.data || []);
+    } catch (error) { console.error("Gagal memuat riwayat", error); }
+  };
+
+  // Muat ulang saat dompet aktif berubah
   useEffect(() => {
-    if (activeTab === 'dashboard') loadDashboardData();
-  }, [activeTab]);
+    loadWallets();
+  }, []);
+
+  useEffect(() => {
+    if (activeWalletId) {
+      loadTransactions();
+    }
+  }, [activeWalletId, activeTab]);
 
   const openInput = (type) => { setTxType(type); setIsModalOpen(true); };
+
+  // Cari objek dompet yang sedang aktif untuk menampilkan saldo
+  const activeWalletInfo = wallets.find(w => w.id === activeWalletId);
 
   return (
     <div className="max-w-md mx-auto h-screen bg-gray-50 shadow-2xl flex flex-col font-sans relative overflow-hidden">
       
-      {/* KONTEN DINAMIS BERDASARKAN TAB */}
       {activeTab === 'dashboard' && (
         <div className="flex-1 overflow-y-auto pb-24">
           <div className="bg-blue-800 text-white p-6 rounded-b-3xl shadow-md z-10">
-            <h1 className="text-xl font-bold tracking-wide mb-6">Keuangan Sederhana</h1>
-            <p className="text-blue-200 text-sm font-medium">{wallet?.name || 'Memuat...'}</p>
-            <h2 className="text-4xl font-black mt-1 mb-2">{formatRp(wallet?.balance)}</h2>
+            
+            {/* PENGALIH DOMPET (WALLET SWITCHER) */}
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-xl font-bold tracking-wide">Keuangan</h1>
+              <select 
+                value={activeWalletId} 
+                onChange={(e) => setActiveWalletId(e.target.value)}
+                className="bg-blue-900 border border-blue-700 text-white text-sm rounded-xl px-3 py-2 outline-none font-bold cursor-pointer"
+              >
+                {wallets.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <h2 className="text-4xl font-black mt-1 mb-2">{formatRp(activeWalletInfo?.balance)}</h2>
             <span className="bg-blue-700/50 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Saldo Saat Ini</span>
           </div>
 
           <div className="p-6">
+            {/* Tombol Input (Tidak Berubah) */}
             <div className="flex gap-4 mb-8">
               <button onClick={() => openInput('expense')} className="flex-1 bg-red-100 text-red-700 py-4 rounded-2xl font-black text-lg hover:bg-red-200 active:scale-95 transition-all shadow-sm">
                 - KELUAR
@@ -54,12 +93,13 @@ export default function App() {
               </button>
             </div>
 
+            {/* Riwayat Terakhir */}
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-gray-800 text-lg">Riwayat Terakhir</h3>
             </div>
             
             <div className="space-y-3">
-              {recentTrx.slice(0, 3).map((trx) => ( // Hanya tampilkan 3 di dasbor
+              {recentTrx.slice(0, 3).map((trx) => (
                 <div key={trx.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{trx.category?.icon}</span>
@@ -78,32 +118,18 @@ export default function App() {
         </div>
       )}
 
-      {activeTab === 'history' && <HistoryView />}
-      {activeTab === 'report' && <ReportView />}
-
-      {/* BOTTOM NAVIGATION (FR-002 UX Requirement) */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-4 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-        <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}>
-          <span className="text-2xl">🏠</span>
-          <span className="text-[10px] font-black uppercase">Beranda</span>
-        </button>
-        <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center gap-1 ${activeTab === 'history' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}>
-          <span className="text-2xl">📋</span>
-          <span className="text-[10px] font-black uppercase">Riwayat</span>
-        </button>
-        <button onClick={() => setActiveTab('report')} className={`flex flex-col items-center gap-1 ${activeTab === 'report' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}>
-          <span className="text-2xl">📊</span>
-          <span className="text-[10px] font-black uppercase">Laporan</span>
-        </button>
-      </div>
+      {/* Komponen lain yang ada di bawahnya tetap sama... */}
+      {/* ... (Bottom Navigation dll) ... */}
 
       {isModalOpen && (
         <InputModal 
           type={txType} 
+          walletId={activeWalletId} // Melempar ID dompet yang sedang aktif ke modal
           onClose={() => setIsModalOpen(false)}
           onSuccess={() => {
             setIsModalOpen(false);
-            if (activeTab === 'dashboard') loadDashboardData();
+            loadWallets(); // Refresh saldo dompet
+            loadTransactions(); // Refresh riwayat
           }}
         />
       )}

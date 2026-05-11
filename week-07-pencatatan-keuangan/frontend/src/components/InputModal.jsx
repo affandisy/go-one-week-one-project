@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function InputModal({ type, onClose, onSuccess }) {
+export default function InputModal({ type, walletId, onClose, onSuccess }) {
   const [categories, setCategories] = useState([]);
   const [selectedCat, setSelectedCat] = useState('');
   const [amount, setAmount] = useState('');
@@ -27,14 +27,15 @@ export default function InputModal({ type, onClose, onSuccess }) {
     
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:3000/api/v1/transactions', {
+      const res = await fetch('/api/v1/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          wallet_id: walletId, // <--- INI TAMBAHAN WAJIB V1.1
           type: type,
           category_id: selectedCat,
           amount: parseFloat(amount),
-          note: '' // Dikosongkan untuk MVP agar sangat cepat
+          note: '' 
         })
       });
 
