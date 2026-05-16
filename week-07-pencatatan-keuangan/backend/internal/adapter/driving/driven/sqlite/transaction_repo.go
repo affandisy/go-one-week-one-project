@@ -22,7 +22,17 @@ type TransactionModel struct {
 	Note       string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+
+	Category CategoryModel `gorm:"foreignKey:CategoryID"`
 }
+
+type CategoryModel struct {
+	ID    string `gorm:"type:varchar(36);primaryKey"`
+	Name  string
+	Color string
+}
+
+func (CategoryModel) TableName() string { return "categories" }
 
 func (TransactionModel) TableName() string { return "transactions" }
 
