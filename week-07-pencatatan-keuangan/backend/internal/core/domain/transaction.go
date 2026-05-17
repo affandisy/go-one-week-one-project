@@ -3,20 +3,23 @@ package domain
 import "time"
 
 type Category struct {
-	Name  string
-	Color string
+	ID       string
+	Name     string
+	Icon     string
+	Type     string
+	Color    string
+	IsActive bool
 }
 
-// Transaction murni Go struct, tanpa tag JSON/GORM
 type Transaction struct {
 	ID         string
 	WalletID   string
-	Type       string
+	Type       string // "income" atau "expense"
 	CategoryID string
 	Amount     float64
 	Note       string
 	DateTime   time.Time
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	Category   Category
+
+	// Untuk kebutuhan join/tampilan riwayat
+	Category Category
 }

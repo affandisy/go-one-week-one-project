@@ -27,12 +27,24 @@ type TransactionModel struct {
 }
 
 type CategoryModel struct {
-	ID    string `gorm:"type:varchar(36);primaryKey"`
-	Name  string
-	Color string
+	ID       string `gorm:"type:varchar(36);primaryKey"`
+	Name     string
+	Icon     string
+	Type     string
+	Color    string
+	IsActive bool
+}
+
+type WalletModel struct {
+	ID       string `gorm:"type:varchar(36);primaryKey"`
+	Name     string
+	Balance  float64
+	Currency string
 }
 
 func (CategoryModel) TableName() string { return "categories" }
+
+func (WalletModel) TableName() string { return "wallets" }
 
 func (TransactionModel) TableName() string { return "transactions" }
 
@@ -89,4 +101,68 @@ func (r *transactionRepository) Save(t *domain.Transaction) error {
 		DateTime:   t.DateTime,
 	}
 	return r.db.Save(&model).Error
+}
+
+func (r *transactionRepository) SaveWithWalletUpdate(trx *domain.Transaction, wallet *domain.Wallet) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Mapper Transaksi
+		trxModel := TransactionModel{
+			ID:         trx.ID,
+			WalletID:   trx.WalletID,
+			Type:       trx.Type,
+			CategoryID: trx.CategoryID,
+			Amount:     trx.Amount,
+			Note:       trx.Note,
+			DateTime:   trx.DateTime,
+		}
+		if err := tx.Create(&trxModel).Error; err != nil {
+			return err
+		}
+
+		// 2. Mapper Dompet
+		walletModel := WalletModel{
+			ID:       wallet.ID,
+			Name:     wallet.Name,
+			Balance:  wallet.Balance,
+			Currency: wallet.Currency,
+		}
+		// Memperbarui spesifik kolom balance saja demi keamanan
+		if err := tx.Model(&walletModel).Update("balance", walletModel.Balance).Error; err != nil {
+			return err
+		}
+
+		return nil // Commit
+	})
+}
+
+func (r *transactionRepository) GetRecentByWallet(walletID string, limit int) ([]domain.Transaction, error) {
+	var models []TransactionModel
+	err := r.db.Preload("Category").
+		Where("wallet_id = ?", walletID).
+		Order("date_time DESC").
+		Limit(limit).
+		Find(&models).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	var transactions []domain.Transaction
+	for _, m := range models {
+		transactions = append(transactions, domain.Transaction{
+			ID:         m.ID,
+			WalletID:   m.WalletID,
+			Type:       m.Type,
+			CategoryID: m.CategoryID,
+			Amount:     m.Amount,
+			Note:       m.Note,
+			DateTime:   m.DateTime,
+			Category: domain.Category{
+				ID:   m.Category.ID,
+				Name: m.Category.Name,
+				Icon: m.Category.Icon,
+			},
+		})
+	}
+	return transactions, nil
 }

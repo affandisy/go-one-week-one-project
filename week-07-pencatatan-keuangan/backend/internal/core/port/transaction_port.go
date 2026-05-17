@@ -1,13 +1,21 @@
 package port
 
-import (
-	"time"
+import "github.com/affandisy/financial-app/internal/core/domain"
 
-	"github.com/affandisy/financial-app/internal/core/domain"
-)
-
-// Driven Port (Outbound) -> Akan diimplementasikan oleh adapter/sqlite
+// Driven Port (Outbound)
 type TransactionRepository interface {
-	FindByWalletAndDateRange(walletID string, start, end time.Time) ([]domain.Transaction, error)
-	Save(transaction *domain.Transaction) error
+	// Menyimpan transaksi dan mengupdate dompet secara atomik (Database Transaction)
+	SaveWithWalletUpdate(trx *domain.Transaction, wallet *domain.Wallet) error
+	GetRecentByWallet(walletID string, limit int) ([]domain.Transaction, error)
+}
+
+// Untuk Kategori (Karena PRD mengharuskan fallback ke "Lainnya")
+type CategoryRepository interface {
+	GetCategoriesByType(txType string) ([]domain.Category, error)
+}
+
+// Driving Port (Inbound)
+type TransactionUseCase interface {
+	RecordTransaction(walletID, txType, categoryID string, amount float64, note string) error
+	GetRecentHistory(walletID string) ([]domain.Transaction, error)
 }
