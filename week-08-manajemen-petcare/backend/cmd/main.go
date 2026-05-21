@@ -23,12 +23,25 @@ func main() {
 	billingRepo := pgrepo.NewBillingRepository(db)
 	billingUseCase := usecase.NewBillingUseCase(billingRepo)
 	billingHandler := rest.NewBillingHandler(billingUseCase)
+	ownerRepo, petRepo := pgrepo.NewMasterRepository(db)
 
-	// 3. Setup Router Fiber
+	// 3. Inisiasi UseCases
+	ownerUseCase := usecase.NewOwnerUseCase(ownerRepo)
+	petUseCase := usecase.NewPetUseCase(petRepo, ownerRepo) // PetUseCase butuh ownerRepo utk validasi
+
+	// 4. Inisiasi Handlers
+	masterHandler := rest.NewMasterHandler(ownerUseCase, petUseCase)
+
+	// 5. Setup Router Fiber
 	app := fiber.New()
 	api := app.Group("/api/v1")
 
 	api.Post("/invoices", billingHandler.CreateInvoice)
+	api.Post("/owners", masterHandler.CreateOwner)
+	api.Get("/owners", masterHandler.GetOwners)
+
+	api.Post("/pets", masterHandler.CreatePet)
+	api.Get("/pets", masterHandler.GetPets)
 
 	log.Println("Server PetCare berjalan di port 3000...")
 	log.Fatal(app.Listen(":3000"))
