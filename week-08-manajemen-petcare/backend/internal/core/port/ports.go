@@ -19,4 +19,5 @@ type BillingUseCase interface {
 
 type NutritionUseCase interface {
 	RecordDiet(petID string, brand string, calories int, notes string) error
+	GetLogsByPet(petID string) ([]domain.NutritionLog, error)
 }

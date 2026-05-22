@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/affandisy/petcare-system/internal/adapter/driven/postgres"
 	pgrepo "github.com/affandisy/petcare-system/internal/adapter/driven/postgres"
 	"github.com/affandisy/petcare-system/internal/adapter/driving/rest"
 	"github.com/affandisy/petcare-system/internal/core/usecase"
@@ -32,6 +33,15 @@ func main() {
 	// 4. Inisiasi Handlers
 	masterHandler := rest.NewMasterHandler(ownerUseCase, petUseCase)
 
+	// 1. Inisiasi Repositori Gizi
+	nutritionRepo := postgres.NewNutritionRepository(db)
+
+	// 2. Inisiasi UseCase Gizi
+	nutritionUseCase := usecase.NewNutritionUseCase(nutritionRepo)
+
+	// 3. Inisiasi Handler Gizi
+	nutritionHandler := rest.NewNutritionHandler(nutritionUseCase)
+
 	// 5. Setup Router Fiber
 	app := fiber.New()
 	api := app.Group("/api/v1")
@@ -42,6 +52,9 @@ func main() {
 
 	api.Post("/pets", masterHandler.CreatePet)
 	api.Get("/pets", masterHandler.GetPets)
+
+	api.Post("/nutrition", nutritionHandler.CreateLog)
+	api.Get("/nutrition", nutritionHandler.GetLogs)
 
 	log.Println("Server PetCare berjalan di port 3000...")
 	log.Fatal(app.Listen(":3000"))

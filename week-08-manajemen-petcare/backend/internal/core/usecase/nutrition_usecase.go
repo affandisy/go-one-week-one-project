@@ -28,3 +28,7 @@ func (uc *nutritionUseCase) RecordDiet(petID string, brand string, calories int,
 
 	return uc.repo.SaveLog(log)
 }
+
+func (uc *nutritionUseCase) GetLogsByPet(petID string) ([]domain.NutritionLog, error) {
+	return uc.repo.GetLogsByPet(petID)
+}
