@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"github.com/affandisy/petcare-system/internal/adapter/driven/postgres"
-	pgrepo "github.com/affandisy/petcare-system/internal/adapter/driven/postgres"
 	"github.com/affandisy/petcare-system/internal/adapter/driving/rest"
+	"github.com/affandisy/petcare-system/internal/adapter/driving/rest/middleware"
 	"github.com/affandisy/petcare-system/internal/core/usecase"
 	"github.com/gofiber/fiber/v2"
 	pgdriver "gorm.io/driver/postgres"
@@ -21,10 +21,10 @@ func main() {
 	}
 
 	// 2. Setup Adapters & UseCases
-	billingRepo := pgrepo.NewBillingRepository(db)
+	billingRepo := postgres.NewBillingRepository(db)
 	billingUseCase := usecase.NewBillingUseCase(billingRepo)
 	billingHandler := rest.NewBillingHandler(billingUseCase)
-	ownerRepo, petRepo := pgrepo.NewMasterRepository(db)
+	ownerRepo, petRepo := postgres.NewMasterRepository(db)
 
 	// 3. Inisiasi UseCases
 	ownerUseCase := usecase.NewOwnerUseCase(ownerRepo)
@@ -42,19 +42,35 @@ func main() {
 	// 3. Inisiasi Handler Gizi
 	nutritionHandler := rest.NewNutritionHandler(nutritionUseCase)
 
+	schedulingRepo := postgres.NewSchedulingRepository(db)
+	schedulingUseCase := usecase.NewSchedulingUseCase(schedulingRepo)
+	schedulingHandler := rest.NewSchedulingHandler(schedulingUseCase)
+
+	userRepo := postgres.NewUserRepository(db)
+	authUseCase := usecase.NewAuthUseCase(userRepo)
+	authHandler := rest.NewAuthHandler(authUseCase)
+
 	// 5. Setup Router Fiber
 	app := fiber.New()
+
+	auth := app.Group("/api/v1/auth")
+	auth.Post("/login", authHandler.Login)
+	auth.Post("/register", authHandler.Register)
+
 	api := app.Group("/api/v1")
 
-	api.Post("/invoices", billingHandler.CreateInvoice)
-	api.Post("/owners", masterHandler.CreateOwner)
-	api.Get("/owners", masterHandler.GetOwners)
+	// Gunakan Middleware Protect untuk semua rute di bawah /api/v1/
+	api.Use(middleware.Protect())
 
-	api.Post("/pets", masterHandler.CreatePet)
-	api.Get("/pets", masterHandler.GetPets)
+	// Contoh Proteksi Role: Hanya Kasir dan Manajer yang bisa membuat tagihan
+	api.Post("/invoices", middleware.RequireRole("Cashier", "Manager"), billingHandler.CreateInvoice)
 
-	api.Post("/nutrition", nutritionHandler.CreateLog)
-	api.Get("/nutrition", nutritionHandler.GetLogs)
+	// Contoh Proteksi Role: Hanya Resepsionis dan Manajer yang bisa mengelola Master Data & Jadwal
+	api.Post("/owners", middleware.RequireRole("Receptionist", "Manager"), masterHandler.CreateOwner)
+	api.Post("/appointments", middleware.RequireRole("Receptionist", "Manager"), schedulingHandler.CreateAppointment)
+
+	// Contoh Proteksi Role: Groomer dan Manajer bisa mencatat Rekam Gizi
+	api.Post("/nutrition", middleware.RequireRole("Groomer", "Manager"), nutritionHandler.CreateLog)
 
 	log.Println("Server PetCare berjalan di port 3000...")
 	log.Fatal(app.Listen(":3000"))
