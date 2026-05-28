@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Activity, ClipboardList, Syringe, Users } from 'lucide-react';
 import CashierView from './pages/CashierView';
+import NutritionLog from './pages/NutritionLog';
 
 // Placeholder komponen (akan kita buat di langkah selanjutnya)
 const Dashboard = () => <div className="p-8"><h1 className="text-2xl font-bold">Dasbor Operasional</h1></div>;
