@@ -15,11 +15,12 @@ import (
 var jwtSecretKey = []byte("super-rahasia-petcare-123")
 
 type authUseCase struct {
-	repo port.UserRepository
+	repo      port.UserRepository
+	jwtSecret string
 }
 
-func NewAuthUseCase(repo port.UserRepository) port.AuthUseCase {
-	return &authUseCase{repo}
+func NewAuthUseCase(repo port.UserRepository, secret string) port.AuthUseCase {
+	return &authUseCase{repo: repo, jwtSecret: secret}
 }
 
 func (uc *authUseCase) RegisterUser(username, password, role string) error {

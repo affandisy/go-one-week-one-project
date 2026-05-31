@@ -7,7 +7,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecretKey = []byte("super-rahasia-petcare-123") // Samakan dengan di usecase
+var jwtSecretKey []byte
+
+// Fungsi untuk menyetel kunci dari main.go
+func SetJWTSecret(secret string) {
+	jwtSecretKey = []byte(secret)
+}
 
 // Protect mendeteksi dan memvalidasi JWT token
 func Protect() fiber.Handler {
