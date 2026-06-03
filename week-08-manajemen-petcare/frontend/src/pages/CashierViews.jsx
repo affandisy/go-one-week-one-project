@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useBillingStore } from '../store/useBillingStore';
 import { Search, Plus, Trash2, Receipt, User, CheckCircle2 } from 'lucide-react';
+import apiClient from '../utils/apiClient';
 
 // --- DATA TIRUAN (MOCK DATA) UNTUK MVP UI ---
 const MOCK_OWNERS = [
@@ -50,13 +51,30 @@ export default function CashierView() {
   };
 
   const handleCheckout = async () => {
-    if (cartItems.length === 0) return alert('Keranjang tagihan masih kosong!');
+  if (cartItems.length === 0) return alert('Keranjang tagihan masih kosong!');
+  
+  try {
+    // 1. Format data sesuai DTO Golang
+    const payload = {
+      owner_id: currentOwner.id,
+      items: cartItems.map(item => ({
+        pet_id: item.pet_id,       // Mengikat layanan ke individu hewan secara spesifik
+        service_id: item.service_id,
+        price: item.price
+      }))
+    };
+
+    // 2. Kirim ke Backend (Token otomatis tersisip oleh Interceptor)
+    const response = await apiClient.post('/invoices', payload);
     
-    // Di sini nantinya Anda akan melakukan POST /api/v1/invoices ke backend Golang
-    alert(`Tagihan berhasil dibuat! Total: ${formatRp(getTotal())}`);
+    alert(`Tagihan berhasil dibuat! Invoice ID: ${response.data.data.ID}`);
     clearTransaction();
     setSearchQuery('');
-  };
+    
+  } catch (error) {
+    alert(`Gagal membuat tagihan: ${error.message}`);
+  }
+};
 
   // Mengambil data keranjang yang sudah dikelompokkan per hewan
   const groupedCart = getItemsGroupedByPet();

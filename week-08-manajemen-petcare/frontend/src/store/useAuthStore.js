@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import apiClient from '../utils/apiClient'; // Import klien HTTP yang baru dibuat
 
 export const useAuthStore = create(
   persist(
@@ -8,26 +9,34 @@ export const useAuthStore = create(
       userRole: null,
       isAuthenticated: false,
 
-      // Fungsi simulasi login (Nantinya diganti dengan pemanggilan API Axios/Fetch)
       login: async (username, password) => {
-        // --- SIMULASI API CALL ---
-        if (username === 'kasir' && password === 'rahasia') {
+        try {
+          // Melakukan POST ke Golang Backend (/api/v1/auth/login)
+          const response = await apiClient.post('/auth/login', {
+            username,
+            password
+          });
+
+          // Mengasumsikan Golang mengembalikan: { message: "...", data: { token: "..." } }
+          // dan Anda perlu mem-parse JWT untuk mendapatkan Role (atau minta backend mengirimkannya)
+          const token = response.data.data.token;
+          
+          // Cara sederhana men-decode JWT di frontend untuk mengambil peran (role)
+          const payloadBase64 = token.split('.')[1];
+          const decodedJson = atob(payloadBase64);
+          const decodedPayload = JSON.parse(decodedJson);
+
           set({
-            token: 'mock-jwt-token-cashier-123',
-            userRole: 'Cashier',
+            token: token,
+            userRole: decodedPayload.role, // Diambil dari klaim "role" JWT
             isAuthenticated: true,
           });
+
           return { success: true };
-        } else if (username === 'manajer' && password === 'rahasia') {
-          set({
-            token: 'mock-jwt-token-manager-456',
-            userRole: 'Manager',
-            isAuthenticated: true,
-          });
-          return { success: true };
+        } catch (error) {
+          // Error otomatis diekstrak oleh response interceptor
+          return { success: false, message: error.message };
         }
-        
-        return { success: false, message: 'Username atau password salah' };
       },
 
       logout: () => {
@@ -39,7 +48,7 @@ export const useAuthStore = create(
       },
     }),
     {
-      name: 'auth-storage', // Nama key di localStorage
+      name: 'auth-storage',
     }
   )
 );
