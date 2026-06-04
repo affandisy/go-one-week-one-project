@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -10,14 +11,15 @@ import (
 )
 
 type paymentUseCase struct {
-	repo port.PaymentRepository
+	repo    port.PaymentRepository
+	auditUC port.AuditUseCase
 }
 
-func NewPaymentUseCase(repo port.PaymentRepository) port.PaymentUseCase {
-	return &paymentUseCase{repo}
+func NewPaymentUseCase(repo port.PaymentRepository, auditUC port.AuditUseCase) port.PaymentUseCase {
+	return &paymentUseCase{repo, auditUC}
 }
 
-func (uc *paymentUseCase) ProcessPayment(invoiceID, method string, amount float64, reference string) (*domain.Payment, error) {
+func (uc *paymentUseCase) ProcessPayment(userID, invoiceID, method string, amount float64, reference string) (*domain.Payment, error) {
 	// 1. Validasi Metode
 	validMethods := map[string]bool{"Cash": true, "Transfer": true, "QRIS": true}
 	if !validMethods[method] {
@@ -42,7 +44,6 @@ func (uc *paymentUseCase) ProcessPayment(invoiceID, method string, amount float6
 		return nil, errors.New("nominal pembayaran kurang dari total tagihan")
 	}
 
-	// 4. Buat Entitas Pembayaran
 	payment := &domain.Payment{
 		ID:        uuid.NewString(),
 		InvoiceID: invoiceID,
@@ -52,10 +53,24 @@ func (uc *paymentUseCase) ProcessPayment(invoiceID, method string, amount float6
 		Reference: reference,
 	}
 
-	// 5. Simpan Pembayaran dan Update Status Invoice secara Atomik
 	if err := uc.repo.SavePaymentAndUpdateInvoice(payment, invoiceID); err != nil {
 		return nil, errors.New("gagal memproses pembayaran")
 	}
+
+	// 4. Catat Audit Trail! (Jalankan secara Asinkron menggunakan Goroutine agar tidak memperlambat HTTP Response)
+	go func() {
+		// Serialize detail pembayaran ke JSON
+		payloadBytes, _ := json.Marshal(payment)
+
+		// Rekam jejak
+		_ = uc.auditUC.RecordAction(
+			userID,
+			"PROCESS_PAYMENT",
+			"Payment",
+			payment.ID,
+			string(payloadBytes),
+		)
+	}()
 
 	return payment, nil
 }

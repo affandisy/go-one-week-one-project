@@ -11,5 +11,5 @@ type PaymentRepository interface {
 
 // Driving Port (API)
 type PaymentUseCase interface {
-	ProcessPayment(invoiceID, method string, amount float64, reference string) (*domain.Payment, error)
+	ProcessPayment(userID, invoiceID, method string, amount float64, reference string) (*domain.Payment, error)
 }

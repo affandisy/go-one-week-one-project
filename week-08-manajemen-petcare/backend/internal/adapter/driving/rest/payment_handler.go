@@ -26,7 +26,11 @@ func (h *PaymentHandler) Process(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format request tidak valid"})
 	}
 
-	payment, err := h.useCase.ProcessPayment(req.InvoiceID, req.Method, req.Amount, req.Reference)
+	// Ambil userID dari context Fiber (hasil ekstraksi JWT oleh Middleware)
+	userID := c.Locals("userID").(string)
+
+	// Teruskan userID ke UseCase
+	payment, err := h.useCase.ProcessPayment(userID, req.InvoiceID, req.Method, req.Amount, req.Reference)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
