@@ -46,6 +46,10 @@ func main() {
 	paymentUseCase := usecase.NewPaymentUseCase(paymentRepo, auditUseCase)
 	paymentHandler := rest.NewPaymentHandler(paymentUseCase)
 
+	analyticsRepo := postgres.NewAnalyticsRepository(db)
+	analyticsUseCase := usecase.NewAnalyticsUseCase(analyticsRepo)
+	analyticsHandler := rest.NewAnalyticsHandler(analyticsUseCase)
+
 	// Suntikkan rahasia ke Middleware juga
 	middleware.SetJWTSecret(cfg.JWTSecret)
 
@@ -60,6 +64,8 @@ func main() {
 	api.Use(middleware.Protect())
 	api.Post("/invoices", middleware.RequireRole("Cashier", "Manager"), billingHandler.CreateInvoice)
 	api.Post("/payments", middleware.RequireRole("Cashier", "Manager"), paymentHandler.Process)
+
+	api.Get("/analytics/nutrition/pets/:pet_id", middleware.RequireRole("Groomer", "Manager"), analyticsHandler.GetPetNutritionSummary)
 
 	// Jalankan Peladen menggunakan AppPort dari Config
 	log.Printf("Server PetCare berjalan di port %s...", cfg.AppPort)
