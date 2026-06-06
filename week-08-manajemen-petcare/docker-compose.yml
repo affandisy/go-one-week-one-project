@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 1. DATABASE SERVICE (PostgreSQL)
+  # ==========================================
+  db:
+    image: postgres:15-alpine
+    container_name: petcare-postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rahasia_super_kuat_123}
+      POSTGRES_DB: ${DB_NAME:-petcare}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - petcare_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-petcare}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - petcare-network
+
+  # ==========================================
+  # 2. BACKEND SERVICE (Golang Fiber)
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: petcare-golang-backend
+    restart: always
+    ports:
+      - "${APP_PORT:-3000}:${APP_PORT:-3000}"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db # Mengarahkan ke container 'db' di dalam network yang sama
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - petcare-network
+
+  # ==========================================
+  # 3. FRONTEND SERVICE (ReactJS Nginx)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: petcare-react-frontend
+    restart: always
+    ports:
+      - "80:80" # Membuka akses web utama di port 80
+    depends_on:
+      - backend
+    networks:
+      - petcare-network
+
+volumes:
+  petcare_pgdata:
+    driver: local
+
+networks:
+  petcare-network:
+    driver: bridge
