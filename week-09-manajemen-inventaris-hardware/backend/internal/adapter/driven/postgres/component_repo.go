@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/affandisy/hardware-erp/internal/core/domain"
 	"gorm.io/gorm"
@@ -56,4 +57,41 @@ func (r *componentRepository) Save(c *domain.Component) error {
 	}
 
 	return r.db.Save(&model).Error
+}
+
+func (r *componentRepository) FindBySKU(sku string) (*domain.Component, error) {
+	var model ComponentModel
+	if err := r.db.Where("sku = ?", sku).First(&model).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var specs map[string]interface{}
+	if len(model.Specs) > 0 {
+		if err := json.Unmarshal(model.Specs, &specs); err != nil {
+			return nil, err
+		}
+	}
+	if specs == nil {
+		specs = map[string]interface{}{}
+	}
+
+	component := &domain.Component{
+		ID:              model.ID,
+		SKU:             model.SKU,
+		Name:            model.Name,
+		Category:        model.Category,
+		Manufacturer:    model.Manufacturer,
+		Model:           model.Model,
+		BasePrice:       model.BasePrice,
+		StockOnHand:     model.StockOnHand,
+		ReservedQty:     model.ReservedQty,
+		Location:        model.Location,
+		IsSerialTracked: model.IsSerialTracked,
+		Specs:           specs,
+	}
+
+	return component, nil
 }

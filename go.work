@@ -8,4 +8,5 @@ use (
 	./week-05-sistem-belajar-bahasa/backend
 	./week-06-point-of-sale/backend
 	./week-07-pencatatan-keuangan/backend
+	./week-09-manajemen-inventaris-hardware/backend
 )
