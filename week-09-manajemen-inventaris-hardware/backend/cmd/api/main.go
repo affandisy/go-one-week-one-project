@@ -113,6 +113,23 @@ func main() {
 		})
 	})
 
+	api.Post("/assemblies/checkout", func(c *fiber.Ctx) error {
+		var req ValidateAssemblyReq // Menggunakan format request yang sama
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format JSON tidak valid"})
+		}
+
+		completedBuild, err := assemblyUseCase.CheckoutAssembly(req.ComponentSKUs)
+		if err != nil {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Checkout berhasil. Stok komponen telah diperbarui.",
+			"data":    completedBuild,
+		})
+	})
+
 	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "3000"

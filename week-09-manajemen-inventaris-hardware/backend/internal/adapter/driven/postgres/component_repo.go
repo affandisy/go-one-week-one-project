@@ -6,6 +6,7 @@ import (
 
 	"github.com/affandisy/hardware-erp/internal/core/domain"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // ComponentModel adalah DTO khusus database untuk menangani tipe data JSONB
@@ -94,4 +95,33 @@ func (r *componentRepository) FindBySKU(sku string) (*domain.Component, error) {
 	}
 
 	return component, nil
+}
+
+func (r *componentRepository) ReserveAndCheckout(skus []string) error {
+	// Memulai transaksi database agar bersifat Atomik (ACID)
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, sku := range skus {
+			var comp ComponentModel
+
+			// Row Locking: Clause .Clauses(clause.Locking{Strength: "UPDATE"})
+			// mencegah transaksi lain membaca/mengubah baris ini sampai transaksi ini selesai
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("sku = ?", sku).First(&comp).Error; err != nil {
+				return err // Rollback jika komponen tidak ditemukan
+			}
+
+			// Validasi Stok
+			if comp.StockOnHand <= 0 {
+				return errors.New("stok habis untuk komponen: " + sku)
+			}
+
+			// Kurangi stok
+			comp.StockOnHand -= 1
+
+			if err := tx.Save(&comp).Error; err != nil {
+				return err // Rollback jika gagal update
+			}
+		}
+		return nil // Commit transaksi jika semua sukses
+	})
 }

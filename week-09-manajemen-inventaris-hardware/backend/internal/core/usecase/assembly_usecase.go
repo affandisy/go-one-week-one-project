@@ -50,3 +50,21 @@ func (uc *assemblyUseCase) SimulateBuild(componentSKUs []string) (*domain.Assemb
 
 	return build, nil
 }
+
+func (uc *assemblyUseCase) CheckoutAssembly(componentSKUs []string) (*domain.AssemblyBuild, error) {
+	// 1. Validasi kompatibilitas ulang sebelum bayar (mencegah manipulasi)
+	build, err := uc.SimulateBuild(componentSKUs)
+	if err != nil {
+		return nil, err
+	}
+	if !build.IsCompatible {
+		return nil, errors.New("rakitan tidak kompatibel, checkout dibatalkan")
+	}
+
+	// 2. Lakukan transaksi pemotongan stok secara atomik ke database
+	if err := uc.compRepo.ReserveAndCheckout(componentSKUs); err != nil {
+		return nil, errors.New("gagal memproses transaksi stok: " + err.Error())
+	}
+
+	return build, nil
+}

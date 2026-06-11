@@ -6,6 +6,7 @@ import "github.com/affandisy/hardware-erp/internal/core/domain"
 type ComponentRepository interface {
 	Save(component *domain.Component) error
 	FindBySKU(sku string) (*domain.Component, error)
+	ReserveAndCheckout(skus []string) error
 }
 
 // Driving Port (API)
